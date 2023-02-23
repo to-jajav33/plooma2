@@ -1,0 +1,15 @@
+{
+  "name": "plooma2",
+  "version": "0.0.1-alpha-1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jajav33 <to.jajav33@gmail.com>",
+  "license": "MIT",
+  "workspaces": [
+    "@plooma/app"
+  ]
+}
