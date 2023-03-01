@@ -24,19 +24,21 @@
       show-if-above
       bordered
     >
-      <q-list>
-        <q-item-label
-          header
-        >
-          Essential Links
-        </q-item-label>
+      <div class="column items-center" style="box-sizing: border-box; border: 2px solid rgba(0,0,0, 0.15);">
+        <q-list v-if="mainStore.profiles[mainStore.currentProfile] && Object.keys(mainStore.profiles[mainStore.currentProfile].nodes).length">
+          <q-item-label
+            header
+          >
+            Story Nodes
+          </q-item-label>
 
-        <EssentialLink
-          v-for="link in essentialLinks"
-          :key="link.title"
-          v-bind="link"
-        />
-      </q-list>
+          <q-item :key="`EditPage_StoryNodeList_${node.nodeUID}`" v-for="(node, nodeUID, nodeIndex) in mainStore.profiles[mainStore.currentProfile].nodes">
+            <q-btn class="full-width flex flex-center" :data-node-index="nodeIndex" draggable="true" @dragstart="(ev) => onDrag(ev, nodeIndex, nodeUID)">
+              {{node.nodeTitle}}
+            </q-btn>
+          </q-item>
+        </q-list>
+      </div>
     </q-drawer>
 
     <q-page-container>
@@ -47,68 +49,28 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import EssentialLink from 'components/EssentialLink.vue';
-
-const linksList = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-];
+import { useMainStore } from '../stores/mainStore';
 
 export default defineComponent({
   name: 'MainLayout',
 
-  components: {
-    EssentialLink
-  },
+  components: {},
 
   setup () {
+    const mainStore = useMainStore();
     const leftDrawerOpen = ref(false)
 
     return {
-      essentialLinks: linksList,
+      mainStore,
       leftDrawerOpen,
       toggleLeftDrawer () {
         leftDrawerOpen.value = !leftDrawerOpen.value
+      },
+      onDrag(ev: DragEvent, nodeIndex: number, nodeUID: string) {
+        leftDrawerOpen.value = false;
+        if (!ev.dataTransfer) return;
+        ev.dataTransfer.setData('node-index', String(nodeIndex));
+        ev.dataTransfer.setData('node-uid', nodeUID);
       }
     }
   }

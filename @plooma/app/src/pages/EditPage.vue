@@ -1,13 +1,13 @@
 <template>
   <q-page class="flex row items-center justify-around">
     <div class="column">
-      <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
+      <div @dragover="onDragOver" @drop="onDrop" class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
         <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), 0)"></q-btn>
       </div>
 
       <div :key="node.nodeUID" v-for="(node, nodeIndex) in mainStore.profiles[mainStore.currentProfile].nodes">
         <note-pad-component :nodeUID="node.nodeUID" :profileName="mainStore.currentProfile"></note-pad-component>
-        <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
+        <div @dragover="onDragOver" @drop="onDrop" class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
           <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), nodeIndex + 1)"></q-btn>
         </div>
       </div>
@@ -29,9 +29,18 @@ export default defineComponent({
   setup() {
     const mainStore = useMainStore();
 
-    console.log(mainStore.profiles.default);
     return {
       mainStore,
+      onDragOver(ev: DragEvent) {
+        // allow drop
+        ev.preventDefault();
+      },
+      onDrop(ev: DragEvent) {
+        if (!ev.dataTransfer) return;
+        const nodeIndex = Number(ev.dataTransfer.getData('node-index'));
+        const nodeUID = ev.dataTransfer.getData('node-uid');
+        mainStore.addNodeAt(nodeUID, nodeIndex);
+      }
     };
   }
 });

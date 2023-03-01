@@ -36,6 +36,7 @@ export const useMainStore = defineStore('MainStore', {
       this.addNodeAt(newNodeUID, 0);
     },
     addNodeAt(nodeUID: string, indx: number) {
+      debugger;
       this.profiles[this.currentProfile].timeline.splice(indx, 0, nodeUID);
     },
     createNewNode (params: {profileName: string}) {
