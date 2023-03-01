@@ -1,12 +1,18 @@
 <template>
-  <q-page class="column items-center justify-center col-6">
-    <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15); width: 50%;">
-      <q-btn round icon="add" color="primary"></q-btn>
+  <q-page class="flex row items-center justify-around">
+    <div class="column">
+      <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
+        <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), 0)"></q-btn>
+      </div>
+
+      <div :key="node.nodeUID" v-for="(node, nodeIndex) in mainStore.profiles[mainStore.currentProfile].nodes">
+        <note-pad-component :nodeUID="node.nodeUID" :profileName="mainStore.currentProfile"></note-pad-component>
+        <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
+          <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), nodeIndex + 1)"></q-btn>
+        </div>
+      </div>
     </div>
-    <note-pad-component style="width: 50%;" :nodeUID="node.nodeUID" :key="node.nodeUID" :profileName="mainStore.currentProfile" v-for="(node) in mainStore.profiles[mainStore.currentProfile].nodes"></note-pad-component>
-    <div class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15); width: 50%;">
-      <q-btn round icon="add" color="primary"></q-btn>
-    </div>
+    
   </q-page>
 </template>
 
