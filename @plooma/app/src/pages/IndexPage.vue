@@ -5,27 +5,24 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-ref } from 'vue';
-import { StateFactory } from '../boot/StateFactory';
-import {MainState} from '../states/MainState';
+import { defineComponent} from 'vue';
 import { useRouter } from 'vue-router';
+import { useMainStore } from '../stores/mainStore';
 
 export default defineComponent({
   name: 'IndexPage',
   components: { },
   setup() {
-    const mainState: ref<MainState> = ref<MainState>(StateFactory.getStore(MainState));
+    const mainStore = useMainStore();
     const router = useRouter();
 
     const createProfile = async () => {
-      await mainState.value.createProfile({profileName: 'default'});
+      await mainStore.createProfile({profileName: 'default'});
       router.push('/edit')
-    }
+    };
+
     return {
-      mainState,
+      mainStore,
       createProfile
     };
   }
