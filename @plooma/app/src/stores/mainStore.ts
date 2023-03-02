@@ -160,6 +160,7 @@ export const useMainStore = defineStore('MainStore', {
     },
     async saveLocal() {
       const nodes = [] as INodes[];
+      debugger;
       for (const nodeUID in this.profiles[this.currentProfile].nodes) {
         const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
         nodes.push({

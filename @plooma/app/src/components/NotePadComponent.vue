@@ -1,7 +1,7 @@
 <template>
   <div>
-    <q-input @update:model-value="onChangeTitle" v-model="mainStore.profiles[mainStore.currentProfile].nodes[props.nodeUID].nodeTitle" filled dense debounce="500"></q-input>
-    <q-editor @blur="onBlur" @focus="onFocus" v-model="text" :toolbar="shouldShowToolbar ? undefined : []"></q-editor>
+    <q-input @update:model-value="onChangeSave" v-model="mainStore.profiles[mainStore.currentProfile].nodes[props.nodeUID].nodeTitle" filled dense></q-input>
+    <q-editor @update:model-value="onChangeSave" @blur="onBlur" @focus="onFocus" v-model="mainStore.profiles[props.profileName].nodes[props.nodeUID].htmlText" :toolbar="shouldShowToolbar ? undefined : []"></q-editor>
   </div>
 </template>
 
@@ -13,6 +13,7 @@ import {
   ref
 } from 'vue';
 import { useMainStore } from '../stores/mainStore';
+import { debounce } from 'quasar';
 
 export default defineComponent({
   name: 'NotePadComponent',
@@ -28,24 +29,25 @@ export default defineComponent({
   },
   setup(props) {
     const mainStore = useMainStore();
-    const text = mainStore.profiles[props.profileName].nodes[props.nodeUID].htmlText;
     let shouldShowToolbar = ref(false);
     let lastSavePromise = Promise.resolve();
+    const onChangeSave = debounce(() => {
+        // queue save request
+        lastSavePromise = new Promise(() => {
+          const old_lastPromise = lastSavePromise;
+          old_lastPromise.then(() => mainStore.saveLocal())
+        });
+    }, 500);
+
     return {
-      text, props, mainStore, shouldShowToolbar,
+      props, mainStore, shouldShowToolbar,
       onFocus() {
         shouldShowToolbar.value = true;
       },
       onBlur() {
         shouldShowToolbar.value = false;
       },
-      async onChangeTitle() {
-        // queue save request
-        lastSavePromise = new Promise(() => {
-          const old_lastPromise = lastSavePromise;
-          old_lastPromise.then(() => mainStore.saveLocal())
-        });
-      }
+      onChangeSave
     };
   },
 });
