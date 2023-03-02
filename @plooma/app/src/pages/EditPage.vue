@@ -2,13 +2,13 @@
   <q-page class="flex row items-center justify-around">
     <div class="column">
       <div @dragover="onDragOver" @drop="onDrop" class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
-        <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), 0)"></q-btn>
+        <q-btn size="xs" round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), 0)"></q-btn>
       </div>
 
       <div :key="nodeUID" v-for="(nodeUID, nodeIndex) in mainStore.profiles[mainStore.currentProfile].timeline">
         <note-pad-component :nodeUID="nodeUID" :profileName="mainStore.currentProfile"></note-pad-component>
         <div @dragover="onDragOver" @drop="onDrop" class="row items-center justify-center q-pa-sm q-ma-md" style="box-sizing: border-box; outline: 2px dashed rgba(0, 0, 0, 0.15);">
-          <q-btn round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), nodeIndex + 1)"></q-btn>
+          <q-btn size="xs" round icon="add" color="primary" @click="mainStore.addNodeAt(mainStore.createNewNode({profileName: mainStore.currentProfile}), nodeIndex + 1)"></q-btn>
         </div>
       </div>
     </div>
