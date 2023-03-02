@@ -39,15 +39,17 @@ export default defineComponent({
           resolve();
         });
     }, 500);
+    const onBlur = debounce(() => {
+      shouldShowToolbar.value = false;
+    }, 250);
+    const onFocus = debounce(() => {
+      shouldShowToolbar.value = true;
+    }, 250);
 
     return {
       props, mainStore, shouldShowToolbar,
-      onFocus() {
-        shouldShowToolbar.value = true;
-      },
-      onBlur() {
-        shouldShowToolbar.value = false;
-      },
+      onFocus,
+      onBlur,
       onChangeSave
     };
   },
