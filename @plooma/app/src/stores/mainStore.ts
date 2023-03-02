@@ -42,7 +42,6 @@ class MainDatabase extends Dexie {
   }
   
   async save(lastState: ILastState, profiles: IProfiles, nodes: INodes[]) {
-    debugger;
     const bulkPut = [
       this.lastState.put(lastState),
       this.profiles.put(profiles),

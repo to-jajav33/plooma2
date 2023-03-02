@@ -1,6 +1,6 @@
 <template>
   <div>
-    <q-input v-model="mainStore.profiles[mainStore.currentProfile].nodes[props.nodeUID].nodeTitle" filled dense></q-input>
+    <q-input @update:model-value="onChangeTitle" v-model="mainStore.profiles[mainStore.currentProfile].nodes[props.nodeUID].nodeTitle" filled dense debounce="500"></q-input>
     <q-editor @blur="onBlur" @focus="onFocus" v-model="text" :toolbar="shouldShowToolbar ? undefined : []"></q-editor>
   </div>
 </template>
@@ -30,6 +30,7 @@ export default defineComponent({
     const mainStore = useMainStore();
     const text = mainStore.profiles[props.profileName].nodes[props.nodeUID].htmlText;
     let shouldShowToolbar = ref(false);
+    let lastSavePromise = Promise.resolve();
     return {
       text, props, mainStore, shouldShowToolbar,
       onFocus() {
@@ -37,6 +38,13 @@ export default defineComponent({
       },
       onBlur() {
         shouldShowToolbar.value = false;
+      },
+      async onChangeTitle() {
+        // queue save request
+        lastSavePromise = new Promise(() => {
+          const old_lastPromise = lastSavePromise;
+          old_lastPromise.then(() => mainStore.saveLocal())
+        });
       }
     };
   },
