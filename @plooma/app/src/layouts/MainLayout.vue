@@ -30,10 +30,11 @@
             header
           >
             Story Nodes
+            <q-item-label caption>Drag any one of these to timeline</q-item-label>
           </q-item-label>
 
           <q-item :key="`EditPage_StoryNodeList_${node.nodeUID}`" v-for="(node, nodeUID, nodeIndex) in mainStore.profiles[mainStore.currentProfile].nodes">
-            <q-btn class="full-width flex flex-center" color="primary" :data-node-index="nodeIndex" draggable="true" @dragstart="(ev) => onDrag(ev, nodeIndex, nodeUID)">
+            <q-btn color="primary" :data-node-index="nodeIndex" draggable="true" @dragstart="(ev) => onDrag(ev, nodeIndex, nodeUID)" icon="drag_indicator" align="left">
               {{node.nodeTitle}}
             </q-btn>
           </q-item>
