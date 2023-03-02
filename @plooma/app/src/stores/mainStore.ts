@@ -155,12 +155,43 @@ export const useMainStore = defineStore('MainStore', {
 
       return nodeUID;
     },
+    async exportTimeline() {
+      const cleanStr = this.generateTimelineString();
+
+      const blob = new Blob([cleanStr], {type: 'text/plain'});
+
+      const aElem = document.createElement('a');
+      aElem.href = URL.createObjectURL(blob);
+      aElem.download = 'Plooma.txt';
+      aElem.click();
+      URL.revokeObjectURL(aElem.href);
+    },
+    generateTimelineString() {
+      const timeline = this.profiles[this.currentProfile].timeline;
+      let str = '';
+
+      for (const nodeUID of timeline) {
+        const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
+
+        str = str + nodeInfo.htmlText;
+      }
+
+      const tempElem = document.createElement('span');
+      tempElem.innerHTML = str;
+      const scriptTagsToBeRemoved = tempElem.querySelectorAll('script');
+      for (const scripElem of scriptTagsToBeRemoved) {
+        scripElem.remove();
+      }
+
+      str = tempElem.innerHTML;
+
+      return str;
+    },
     removeTimelineNodeAt(nodeIndex: number) {
       this.profiles[this.currentProfile].timeline.splice(nodeIndex, 1);
     },
     async saveLocal() {
       const nodes = [] as INodes[];
-      debugger;
       for (const nodeUID in this.profiles[this.currentProfile].nodes) {
         const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
         nodes.push({

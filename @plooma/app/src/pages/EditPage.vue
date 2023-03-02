@@ -19,6 +19,20 @@
       </div>
     </div>
     
+    <q-page-sticky position="bottom-right" :offset="[18, 18]">
+      <q-fab
+          v-model="shouldShowFabMenu "
+          vertical-actions-align="right"
+          color="primary"
+          icon="more_vert"
+          direction="up"
+        >
+          <q-fab-action label-position="left" color="primary" @click="onClickExport" icon="download" label="Download" />
+          <!-- <q-fab-action label-position="left" color="secondary" @click="onClick" icon="alarm" label="Alarm" />
+          <q-fab-action label-position="left" color="orange" @click="onClick" icon="airplay" label="Airplay" />
+          <q-fab-action label-position="left" color="accent" @click="onClick" icon="room" label="Map" /> -->
+        </q-fab>
+    </q-page-sticky>
   </q-page>
 </template>
 
@@ -39,10 +53,15 @@ export default defineComponent({
   setup() {
     const mainStore = useMainStore();
     let shouldShowMenus = ref(false);
+    let shouldShowFabMenu = ref(false)
 
     return {
       mainStore,
       shouldShowMenus,
+      shouldShowFabMenu,
+      async onClickExport() {
+        await mainStore.exportTimeline();
+      },
       onDragOver(ev: DragEvent) {
         // allow drop
         ev.preventDefault();
