@@ -33,13 +33,12 @@ export const useMainStore = defineStore('MainStore', {
           });
       }
       const newNodeUID = this.createNewNode({profileName: this.currentProfile});
-      this.addNodeAt(newNodeUID, 0);
+      this.addTimelineNodeAt(newNodeUID, 0);
     },
-    addNodeAt(nodeUID: string, indx: number) {
-      debugger;
+    addTimelineNodeAt(nodeUID: string, indx: number) {
       this.profiles[this.currentProfile].timeline.splice(indx, 0, nodeUID);
     },
-    createNewNode (params: {profileName: string}) {
+    createNewNode(params: {profileName: string}) {
       const {profileName} = params;
       const nodeUID = uid();
       const newNode = {
@@ -50,6 +49,9 @@ export const useMainStore = defineStore('MainStore', {
       this.profiles[profileName].nodes[nodeUID] = newNode;
 
       return nodeUID;
+    },
+    removeTimelineNodeAt(nodeIndex: number) {
+      this.profiles[this.currentProfile].timeline.splice(nodeIndex, 1);
     }
   }
 });

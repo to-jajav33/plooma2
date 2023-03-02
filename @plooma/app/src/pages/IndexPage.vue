@@ -1,6 +1,6 @@
 <template>
   <q-page class="row items-center justify-evenly">
-    <q-btn @click="createProfile" label="begin"></q-btn>
+    <q-btn @click="createProfile" color="primary" label="begin"></q-btn>
   </q-page>
 </template>
 
