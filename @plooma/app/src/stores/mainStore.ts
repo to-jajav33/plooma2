@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import { defineStore } from 'pinia';
 import { uid } from 'quasar';
 import { reactive } from 'vue';
+import { Notify } from 'quasar';
 
 interface ILastState {id: 0, currentProfile: string}
 interface IProfiles {
@@ -132,16 +133,20 @@ export const useMainStore = defineStore('MainStore', {
         {title: 'Return to Ordinary World a changed person. Receives final reward/lesson/skill/gift/etc'},
       ];
 
+      const skipLocalSave = true;
       for (const i in templateArr) {
         const templateInfo = templateArr[i];
         const newNodeUID = this.createNewNode({profileName: this.currentProfile, nodeTitle: templateInfo.title});
-        this.addTimelineNodeAt(newNodeUID, Number(i));
+        this.addTimelineNodeAt(newNodeUID, Number(i), skipLocalSave);
       }
 
       await this.saveLocal();
     },
-    addTimelineNodeAt(nodeUID: string, indx: number) {
+    async addTimelineNodeAt(nodeUID: string, indx: number, skipLocalSave = false) {
       this.profiles[this.currentProfile].timeline.splice(indx, 0, nodeUID);
+      if (!skipLocalSave) {
+        await this.saveLocal();
+      }
     },
     createNewNode(params: {profileName: string, nodeTitle?: string}) {
       const {profileName, nodeTitle} = params;
@@ -187,8 +192,9 @@ export const useMainStore = defineStore('MainStore', {
 
       return str;
     },
-    removeTimelineNodeAt(nodeIndex: number) {
+    async removeTimelineNodeAt(nodeIndex: number) {
       this.profiles[this.currentProfile].timeline.splice(nodeIndex, 1);
+      await this.saveLocal();
     },
     async saveLocal() {
       const nodes = [] as INodes[];
@@ -201,6 +207,14 @@ export const useMainStore = defineStore('MainStore', {
           htmlText: nodeInfo.htmlText
         });
       }
+      
+      const notif = Notify.create({
+        group: false, // required to be updatable
+        timeout: 0, // we want to be in control when it gets dismissed
+        spinner: true,
+        message: 'Saving...',
+      });
+
       await mainDatabase.save(
         {
           id: 0, // this should always be zero so we always get the last state
@@ -213,6 +227,13 @@ export const useMainStore = defineStore('MainStore', {
         },
         nodes
       );
+
+      notif({
+        icon: 'done', // we add an icon
+        spinner: false, // we reset the spinner setting so the icon can be displayed
+        message: 'Saving Completed',
+        timeout: 2500 // we will timeout it in 2.5s
+      });
     }
   }
 });
