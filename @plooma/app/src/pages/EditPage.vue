@@ -7,7 +7,7 @@
 
       <div :key="nodeUID" v-for="(nodeUID, nodeIndex) in mainStore.profiles[mainStore.currentProfile].timeline">
         <div class="row">
-          <q-btn @click="() => shouldShowMenus = !shouldShowMenus" color="primary" :icon="shouldShowMenus ? 'visibility' : 'visibility_off'" outline flat></q-btn>
+          <q-btn @click="() => shouldShowMenus = !shouldShowMenus" color="primary" icon="more_vert" outline flat></q-btn>
           <div class="row" v-if="shouldShowMenus">
             <q-btn @click="onRemoveFromTimeline(nodeIndex)" color="negative" icon="delete" outline flat></q-btn>
           </div>
