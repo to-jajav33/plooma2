@@ -12,10 +12,10 @@
         />
 
         <q-toolbar-title>
-          Quasar App
+          {{ packageJson.productName }}
         </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <div>Quasar v{{ packageJson.version }}</div>
       </q-toolbar>
     </q-header>
 
@@ -49,8 +49,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent,
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+ref } from 'vue';
 import { useMainStore } from '../stores/mainStore';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import packageJson from '../../package.json';
+
 
 export default defineComponent({
   name: 'MainLayout',
@@ -62,6 +69,7 @@ export default defineComponent({
     const leftDrawerOpen = ref(false)
 
     return {
+      packageJson,
       mainStore,
       leftDrawerOpen,
       toggleLeftDrawer () {
