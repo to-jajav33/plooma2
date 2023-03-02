@@ -33,9 +33,10 @@ export default defineComponent({
     let lastSavePromise = Promise.resolve();
     const onChangeSave = debounce(() => {
         // queue save request
-        lastSavePromise = new Promise(() => {
+        lastSavePromise = new Promise((resolve) => {
           const old_lastPromise = lastSavePromise;
-          old_lastPromise.then(() => mainStore.saveLocal())
+          old_lastPromise.then(() => mainStore.saveLocal());
+          resolve();
         });
     }, 500);
 
