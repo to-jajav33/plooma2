@@ -1,6 +1,59 @@
+import Dexie from 'dexie';
 import { defineStore } from 'pinia';
 import { uid } from 'quasar';
 import { reactive } from 'vue';
+
+interface ILastState {id: 0, currentProfile: string}
+interface IProfiles {
+  profileName: string,
+  nodeUIDs: string[],
+  timeline: string[],
+}
+interface INodes {
+  nodeUID: string,
+  profileName: string,
+  htmlText: string,
+  nodeTitle: string
+}
+
+const DB_VERSION = 1;
+class MainDatabase extends Dexie {
+  lastState!: Dexie.Table<ILastState, string>
+  profiles!: Dexie.Table<IProfiles, string>
+  nodes!: Dexie.Table<INodes, string>
+
+  constructor() {
+    super(MainDatabase.name);
+
+    this.version(DB_VERSION).stores({
+      lastState: 'id, currentProfile',
+      profiles: 'profileName, *nodeUIDs, *timeline',
+      nodes: 'nodeUID, profileName, htmlText, nodeTitle'
+    });
+  }
+  
+  stringToNumber(str: string): number {
+    let numberStr = '';
+    for (let i = 0; i < str.length; i++) {
+      numberStr = numberStr + str.charCodeAt(i);
+    }
+
+    return parseInt(numberStr);
+  }
+  
+  async save(lastState: ILastState, profiles: IProfiles, nodes: INodes[]) {
+    debugger;
+    const bulkPut = [
+      this.lastState.put(lastState),
+      this.profiles.put(profiles),
+      this.nodes.bulkPut(nodes)
+    ];
+
+    await Promise.all(bulkPut);
+  }
+}
+
+const mainDatabase = new MainDatabase();
 
 type TypeNotePadNode = Record<string, {htmlText: string, nodeUID: string, nodeTitle: string}>;
 
@@ -20,7 +73,7 @@ export const useMainStore = defineStore('MainStore', {
   },
 
   actions: {
-    createProfile (params: {profileName: string}) {
+    async createProfile (params: {profileName: string}) {
       const {profileName} = params;
       if (!profileName) return;
 
@@ -55,6 +108,8 @@ export const useMainStore = defineStore('MainStore', {
         const newNodeUID = this.createNewNode({profileName: this.currentProfile, nodeTitle: templateInfo.title});
         this.addTimelineNodeAt(newNodeUID, Number(i));
       }
+
+      await this.saveLocal();
     },
     addTimelineNodeAt(nodeUID: string, indx: number) {
       this.profiles[this.currentProfile].timeline.splice(indx, 0, nodeUID);
@@ -73,6 +128,30 @@ export const useMainStore = defineStore('MainStore', {
     },
     removeTimelineNodeAt(nodeIndex: number) {
       this.profiles[this.currentProfile].timeline.splice(nodeIndex, 1);
+    },
+    async saveLocal() {
+      const nodes = [] as INodes[];
+      for (const nodeUID in this.profiles[this.currentProfile].nodes) {
+        const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
+        nodes.push({
+          nodeUID,
+          nodeTitle: nodeInfo.nodeTitle,
+          profileName: this.currentProfile,
+          htmlText: nodeInfo.htmlText
+        });
+      }
+      await mainDatabase.save(
+        {
+          id: 0, // this should always be zero so we always get the last state
+          currentProfile: this.currentProfile
+        },
+        {
+          profileName: this.currentProfile,
+          nodeUIDs: Object.keys(this.profiles[this.currentProfile].nodes),
+          timeline: [...this.profiles[this.currentProfile].timeline]
+        },
+        nodes
+      );
     }
   }
 });

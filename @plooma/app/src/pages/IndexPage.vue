@@ -1,6 +1,6 @@
 <template>
   <q-page class="row items-center justify-evenly">
-    <q-btn @click="createProfile" color="primary" label="begin"></q-btn>
+    <q-btn @click="createProfile" color="primary" :disable="isBeginBtnDisabled" label="begin"></q-btn>
   </q-page>
 </template>
 
@@ -15,15 +15,23 @@ export default defineComponent({
   setup() {
     const mainStore = useMainStore();
     const router = useRouter();
+    let isBeginBtnDisabled = false;
 
     const createProfile = async () => {
-      await mainStore.createProfile({profileName: 'default'});
-      router.push('/edit')
+      try {
+        isBeginBtnDisabled = true;
+        await mainStore.createProfile({profileName: 'default'});
+        router.push('/edit');
+      } catch (e) {
+        console.error(e);
+        isBeginBtnDisabled = false;
+      }
     };
 
     return {
       mainStore,
-      createProfile
+      createProfile,
+      isBeginBtnDisabled
     };
   }
 });
