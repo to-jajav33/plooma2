@@ -24,7 +24,7 @@
       show-if-above
       bordered
     >
-      <div class="column items-center" style="box-sizing: border-box; border: 2px solid rgba(0,0,0, 0.15);">
+      <div class="column items-center" style="box-sizing: border-box; border: 2px solid rgba(128,128,128, 0.15);">
         <q-list v-if="mainStore.profiles[mainStore.currentProfile] && Object.keys(mainStore.profiles[mainStore.currentProfile].nodes).length">
           <q-item-label
             header
@@ -33,7 +33,7 @@
           </q-item-label>
 
           <q-item :key="`EditPage_StoryNodeList_${node.nodeUID}`" v-for="(node, nodeUID, nodeIndex) in mainStore.profiles[mainStore.currentProfile].nodes">
-            <q-btn class="full-width flex flex-center" :data-node-index="nodeIndex" draggable="true" @dragstart="(ev) => onDrag(ev, nodeIndex, nodeUID)">
+            <q-btn class="full-width flex flex-center" color="primary" :data-node-index="nodeIndex" draggable="true" @dragstart="(ev) => onDrag(ev, nodeIndex, nodeUID)">
               {{node.nodeTitle}}
             </q-btn>
           </q-item>
