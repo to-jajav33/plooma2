@@ -1,5 +1,8 @@
 <template>
-  <q-editor v-model="text"></q-editor>
+  <div>
+    <q-input v-model="mainStore.profiles[mainStore.currentProfile].nodes[props.nodeUID].nodeTitle" filled dense></q-input>
+    <q-editor v-model="text"></q-editor>
+  </div>
 </template>
 
 <script lang="ts">
@@ -24,7 +27,7 @@ export default defineComponent({
     const mainStore = useMainStore();
     const text = mainStore.profiles[props.profileName].nodes[props.nodeUID].htmlText;
 
-    return {text};
+    return {text, props, mainStore};
   },
 });
 </script>
