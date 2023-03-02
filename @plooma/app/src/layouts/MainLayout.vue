@@ -15,7 +15,7 @@
           {{ packageJson.productName }}
         </q-toolbar-title>
 
-        <div>Quasar v{{ packageJson.version }}</div>
+        <div>v{{ packageJson.version }}</div>
       </q-toolbar>
     </q-header>
 
