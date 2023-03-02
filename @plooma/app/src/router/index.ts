@@ -1,4 +1,5 @@
 import { route } from 'quasar/wrappers';
+import { useMainStore } from 'src/stores/mainStore';
 import {
   createMemoryHistory,
   createRouter,
@@ -32,6 +33,10 @@ export default route(function (/* { store, ssrContext } */) {
       process.env.MODE === 'ssr' ? void 0 : process.env.VUE_ROUTER_BASE
     ),
   });
+  Router.beforeEach((to, from, next) => {
+    const mainStore = useMainStore();
+    mainStore.init().then(next);
+  })
 
   return Router;
 });

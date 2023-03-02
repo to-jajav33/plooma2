@@ -12,7 +12,7 @@ export default defineComponent({
     const $q = useQuasar();
 
     // calling here; equivalent to when component is created
-    $q.dark.set(true)
+    $q.dark.set(true);
   }
 })
 </script>

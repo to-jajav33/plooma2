@@ -50,6 +50,24 @@ class MainDatabase extends Dexie {
 
     await Promise.all(bulkPut);
   }
+
+  async getLastState() {
+    return await this.lastState.get({id: 0});
+  }
+
+  async getNodesOfProfileName(profileName: string) {
+    const arr = await this.nodes.where({profileName}).toArray();
+    const nodes = {} as Record<string, INodes>;
+    for (const item of arr) {
+      nodes[item.nodeUID] = item;
+    }
+
+    return nodes;
+  }
+
+  async getTimelineOfProfileName(profileName: string) {
+    return await this.profiles.get({profileName})
+  }
 }
 
 const mainDatabase = new MainDatabase();
@@ -72,6 +90,18 @@ export const useMainStore = defineStore('MainStore', {
   },
 
   actions: {
+    async init() {
+      const lastState = await mainDatabase.getLastState();
+      this.currentProfile = lastState?.currentProfile || 'default';
+
+      const nodes = await mainDatabase.getNodesOfProfileName(this.currentProfile);
+      const timeline = (await mainDatabase.getTimelineOfProfileName(this.currentProfile))?.timeline;
+
+      this.profiles[this.currentProfile] = reactive({
+        nodes: reactive(nodes || {}),
+        timeline: reactive(timeline || [])
+      });
+    },
     async createProfile (params: {profileName: string}) {
       const {profileName} = params;
       if (!profileName) return;
