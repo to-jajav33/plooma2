@@ -59,6 +59,7 @@ module.exports = configure(function (ctx) {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-build
     build: {
+      env: require('dotenv').config().parsed,
       vueRouterMode: 'hash', // available values: 'hash', 'history'
 
       // transpile: false,
@@ -88,7 +89,7 @@ module.exports = configure(function (ctx) {
       server: {
         type: 'http'
       },
-      port: 8080,
+      port: process.env.PORT_PLOOMA_NODE || 8080,
       open: true // opens browser window automatically
     },
 
@@ -123,7 +124,7 @@ module.exports = configure(function (ctx) {
       // manualStoreHydration: true,
       // manualPostHydrationTrigger: true,
 
-      prodPort: 3000, // The default port that the production server should use
+      prodPort: process.env.PORT_PLOOMA_NODE || 3000, // The default port that the production server should use
                       // (gets superseded if process.env.PORT is specified at runtime)
 
       maxAge: 1000 * 60 * 60 * 24 * 30,

@@ -8,7 +8,9 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts,.vue ./",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "echo \"No test specified\" && exit 0"
+    "test": "echo \"No test specified\" && exit 0",
+    "deploy:start": "npx shipit production deploy",
+    "deploy:rollback": "npx shipit production rollback"
   },
   "dependencies": {
     "@quasar/extras": "^1.0.0",
@@ -26,10 +28,15 @@
     "@types/node": "^12.20.21",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
+    "dotenv": "^16.0.3",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-vue": "^9.0.0",
-    "prettier": "^2.5.1"
+    "fs-extra": "^11.1.0",
+    "prettier": "^2.5.1",
+    "shipit-cli": "^5.3.0",
+    "shipit-deploy": "^5.3.0",
+    "shipit-shared": "^4.4.2"
   },
   "browserslist": [
     "last 10 Chrome versions",
