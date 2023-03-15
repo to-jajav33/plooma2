@@ -47,7 +47,7 @@
 //         this.#data[type.toLowerCase()] = value;
 //     }
 
-//     setDragImage = function (img: ImageBitmap, offsetX: number, offsetY: number) {
+//     setDragImage = function (img: HTMLImageElement, offsetX: number, offsetY: number) {
 //         var ddp: DragAndDropPolyfill = instance;
 //         ddp._imgCustom = img;
 //         ddp._imgOffset = { x: offsetX, y: offsetY };
@@ -59,15 +59,16 @@ class DragAndDropPolyfill {
     #lastClick: number;
     // @ts-ignore
     #dataTransfer: globalThis.DataTransfer;
-    #dragSource: HTMLElement | null;
-    #lastTouch: null | TouchEvent | Touch;
-    #lastTarget: null;
-    #ptDown: null | {x: number, y: number};
-    #isDragEnabled: boolean;
-    #isDropZone: boolean;
+    #dragSource: HTMLElement | null = null;
+    #lastTouch: null | TouchEvent | Touch = null;
+    #lastTarget: null | Element = null;
+    #ptDown: null | {x: number, y: number} = null;
+    #isDragEnabled = false;
+    #isDropZone = false;
     #pressHoldInterval: string | number | undefined;
-    #img: HTMLImageElement | null;
-    #imgCustom: null;
+    #img: HTMLElement | null | undefined;
+    #imgCustom: null | Node = null;
+    #imgOffset: { x: number, y: number } = {x: 0, y: 0};
 
     constructor() {
         if (instance) return instance;
@@ -76,6 +77,7 @@ class DragAndDropPolyfill {
         this.#dragSource = null;
         this.#img = null;
         this.#imgCustom = null;
+        this.#imgOffset = {x: 0, y: 0};
         this.#lastTouch = null;
         this.#lastTarget = null;
         this.#ptDown = null;
@@ -120,6 +122,17 @@ class DragAndDropPolyfill {
         }
     }
 
+    #createImage(e: TouchEvent) {
+        if (this.#img) {
+            this.#destroyImage();
+        }
+
+        if (!this.#imgCustom && !this.#dragSource) return;
+
+        const imgNode = this.#imgCustom || this.#dragSource;
+        this.#img = imgNode?.cloneNode(true) as HTMLElement;
+    }
+
     #destroyImage() {
         if (this.#img && this.#img.parentElement) {
             this.#img.parentElement.removeChild(this.#img);
@@ -147,6 +160,19 @@ class DragAndDropPolyfill {
         return false;
     }
 
+    #getDelta(e: TouchEvent) {
+        if (DragAndDropPolyfill.#ISPRESSHOLDMODE && !this.#ptDown) { return 0; };
+
+        const p = this.#getPoint(e);
+        if (!this.#ptDown) {
+            this.#ptDown = p;
+            return 0;
+        }
+
+
+        return Math.abs(p.x - this.#ptDown.x) + Math.abs(p.y - this.#ptDown.y);
+    }
+
     #getPoint(e: TouchEvent | Touch, page?: boolean) {
         let tl : Touch;
         if (e instanceof TouchEvent) {
@@ -157,8 +183,73 @@ class DragAndDropPolyfill {
         return { x: page ? tl.pageX : tl.clientX, y: page ? tl.pageY : tl.clientY };
     }
 
+    #getTarget(e: TouchEvent) {
+        const pt = this.#getPoint(e);
+        let el = document.elementFromPoint(pt.x, pt.y);
+
+        while (el && self.getComputedStyle(el).pointerEvents === 'none') {
+            el = el.parentElement;
+        }
+
+        return el;
+    }
+
+    #moveImage(e: TouchEvent) {
+        requestAnimationFrame(() => {
+            if (this.#img) {
+                const pt = this.#getPoint(e, true);
+                const s = this.#img.style;
+                s.position = 'absolute';
+                s.pointerEvents = 'none';
+                s.zIndex = '999999';
+                s.left = Math.round(pt.x - this.#imgOffset.x) + 'px';
+                s.top = Math.round(pt.y - this.#imgOffset.y) + 'px';
+            }
+        });
+    }
+
     #ontouchmove(e: TouchEvent) {
-        /** @todo implement touch move from https://github.com/Bernardo-Castilho/dragdroptouch/blob/master/DragDropTouch.js */
+        if (this.#shouldCancelPressHoldMove(e)) {
+            this.#reset();
+            return;
+        }
+
+        if (this.#shouldHandleMove(e) || this.#shouldHandlePressHoldMove(e)) {
+            const target = this.#getTarget(e);
+
+            if (this.#dispatchEvent(e, 'mousemove', target)) {
+                this.#lastTouch = e;
+                e.preventDefault();
+                return;
+            }
+
+            if (!this.#lastTouch) this.#lastTouch = e;
+
+            if (this.#dragSource && !this.#img && this.#shouldStartDragging(e)) {
+                if (this.#dispatchEvent(this.#lastTouch as TouchEvent, 'dragstart', this.#dragSource)) {
+                    this.#dragSource = null;
+                    return;
+                }
+
+                this.#createImage(e);
+                this.#dispatchEvent(e, 'dragcenter', target);
+            }
+
+            // continue drag
+            if (this.#img) {
+                this.#lastTouch = e;
+                e.preventDefault();
+                this.#dispatchEvent(e, 'drag', this.#dragSource);
+
+                if (target !== this.#lastTarget) {
+                    this.#dispatchEvent(this.#lastTouch, 'dragleave', this.#lastTarget);
+                    this.#dispatchEvent(e, 'dragenter', target);
+                    this.#lastTarget = target;
+                }
+                this.#moveImage(e);
+                this.#isDropZone = this.#dispatchEvent(e, 'dragover', target);
+            }
+        }
     }
 
     #ontouchstart(e: TouchEvent) {
@@ -214,8 +305,26 @@ class DragAndDropPolyfill {
         clearInterval(this.#pressHoldInterval);
     }
 
+    #shouldCancelPressHoldMove(e: TouchEvent) {
+        return DragAndDropPolyfill.#ISPRESSHOLDMODE && !this.#isDragEnabled && this.#getDelta(e) > DragAndDropPolyfill.#PRESSHOLDMARGIN;
+    }
+
     #shouldHandle(e: TouchEvent) {
         return e && !e.defaultPrevented && e.touches && e.touches.length < 2;
+    }
+
+    #shouldHandleMove(e: TouchEvent) {
+        return DragAndDropPolyfill.#ISPRESSHOLDMODE && this.#shouldHandle(e);
+    }
+
+    #shouldHandlePressHoldMove(e: TouchEvent) {
+        return DragAndDropPolyfill.#ISPRESSHOLDMODE && this.#isDragEnabled && e && e.touches && e.touches.length;
+    }
+
+    #shouldStartDragging(e: TouchEvent) {
+        const delta = this.#getDelta(e);
+
+        return delta > DragAndDropPolyfill.#THRESHOLD || (DragAndDropPolyfill.#ISPRESSHOLDMODE && delta >= DragAndDropPolyfill.#PRESSHOLDTHRESHOLD);
     }
 
     // constants
