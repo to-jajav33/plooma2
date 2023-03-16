@@ -109,12 +109,14 @@ export const useMainStore = defineStore('MainStore', {
 
       this.currentProfile = profileName;
 
-      if (!this.profiles[this.currentProfile]) {
-          this.profiles[this.currentProfile] = reactive({
-            nodes: {},
-            timeline: reactive([])
-          });
+      if (this.profiles[this.currentProfile]) {
+        const keys = Object.keys(this.profiles[this.currentProfile].nodes);
+        if (keys.length) return; // user already exists and has nodes, no need to create a profile
       }
+      this.profiles[this.currentProfile] = reactive({
+        nodes: {},
+        timeline: reactive([])
+      });
 
       // heroes journey template
       // https://www.movieoutline.com/articles/the-hero-journey-mythic-structure-of-joseph-campbell-monomyth.html
@@ -198,6 +200,7 @@ export const useMainStore = defineStore('MainStore', {
     },
     async saveLocal() {
       const nodes = [] as INodes[];
+      debugger;
       for (const nodeUID in this.profiles[this.currentProfile].nodes) {
         const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
         nodes.push({
