@@ -1,64 +1,66 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 
+let instance: undefined | DragAndDropPolyfill = undefined;
 
-// class DataTransfer {
-//     #dropEffect: string;
-//     #effectAllowed: string;
-//     #data: Record<string, unknown>;
+class DataTransferPolyfill {
+    #dropEffect: string;
+    #effectAllowed: string;
+    #data: Record<string, unknown>;
 
-//     constructor() {
-//         this.#dropEffect = 'move';
-//         this.#effectAllowed = 'all';
-//         this.#data = {};
-//     }
+    constructor() {
+        this.#dropEffect = 'move';
+        this.#effectAllowed = 'all';
+        this.#data = {};
+    }
 
-//     get dropEffect() {
-//         return this.#dropEffect;
-//     }
-//     set dropEffect(val: string) {
-//         this.#dropEffect = val;
-//     }
+    get dropEffect() {
+        return this.#dropEffect;
+    }
+    set dropEffect(val: string) {
+        this.#dropEffect = val;
+    }
 
-//     get effectAllowed() {
-//         return this.#effectAllowed;
-//     }
-//     set effectAllowed(val: string) {
-//         this.#effectAllowed = val;
-//     }
+    get effectAllowed() {
+        return this.#effectAllowed;
+    }
+    set effectAllowed(val: string) {
+        this.#effectAllowed = val;
+    }
 
-//     get types () {
-//         return Object.keys(this.#data);
-//     }
+    get types () {
+        return Object.keys(this.#data);
+    }
 
-//     clearData(type: string) {
-//         if (type === undefined) return;
-//         if (type !== null) {
-//             delete this.#data[type.toLocaleLowerCase()];
-//         } else {
-//             this.#data = {};
-//         }
-//     }
+    clearData(type: string) {
+        if (type === undefined) return;
+        if (type !== null) {
+            delete this.#data[type.toLocaleLowerCase()];
+        } else {
+            this.#data = {};
+        }
+    }
 
-//     getData(type: string) {
-//         return this.#data[type.toLowerCase()] || '';
-//     }
+    getData(type: string) {
+        return this.#data[type.toLowerCase()] || '';
+    }
 
-//     setData(type: string, value: unknown) {
-//         this.#data[type.toLowerCase()] = value;
-//     }
+    setData(type: string, value: unknown) {
+        this.#data[type.toLowerCase()] = value;
+    }
 
-//     setDragImage = function (img: HTMLImageElement, offsetX: number, offsetY: number) {
-//         var ddp: DragAndDropPolyfill = instance;
-//         ddp._imgCustom = img;
-//         ddp._imgOffset = { x: offsetX, y: offsetY };
-//     };
-// }
+    setDragImage = function (img: HTMLImageElement, offsetX: number, offsetY: number) {
+        instance = instance || new DragAndDropPolyfill();
+        const ddp: DragAndDropPolyfill = instance;
+        ddp.imgCustom = img;
+        ddp.imgOffset = { x: offsetX, y: offsetY };
+    };
+}
 
 class DragAndDropPolyfill {
     // @ts-ignore
     #lastClick: number;
     // @ts-ignore
-    #dataTransfer: globalThis.DataTransfer;
+    #dataTransfer: DataTransfer;
     #dragSource: HTMLElement | null = null;
     #lastTouch: null | TouchEvent | Touch = null;
     #lastTarget: null | Element = null;
@@ -69,9 +71,16 @@ class DragAndDropPolyfill {
     #img: HTMLElement | null | undefined;
     #imgCustom: null | Node = null;
     #imgOffset: { x: number, y: number } = {x: 0, y: 0};
+    ontouchend: null | ((e: TouchEvent) => void) = null;
+    ontouchmove: null | ((e: TouchEvent) => void) = null;
+    ontouchstart: null | ((e: TouchEvent) => void) = null;
 
     constructor() {
         if (instance) return instance;
+
+        this.ontouchend = this.#ontouchend.bind(this);
+        this.ontouchmove = this.#ontouchmove.bind(this);
+        this.ontouchstart = this.#ontouchstart.bind(this);
 
         this.#lastClick = 0;        
         this.#dragSource = null;
@@ -97,11 +106,11 @@ class DragAndDropPolyfill {
         if (navigator.maxTouchPoints) {
             const opts = supportsPassive ? {passive: false, capture: false} : false;
 
-            document.addEventListener('touchstart', this.#ontouchstart, opts);
-            document.addEventListener('touchmove', this.#ontouchmove, opts);
-            document.addEventListener('touchend', this.#ontouchend, opts);
-            document.addEventListener('touchcancel', this.#ontouchcancel, opts);
-        } 
+            document.addEventListener('touchstart', this.ontouchstart, opts);
+            document.addEventListener('touchmove', this.ontouchmove, opts);
+            document.addEventListener('touchend', this.ontouchend, opts);
+            document.addEventListener('touchcancel', this.ontouchend, opts);
+        }
     }
 
     #closestDraggable(e: HTMLElement | null) {
@@ -118,7 +127,44 @@ class DragAndDropPolyfill {
     #copyProps (dst: Record<string, unknown>, src: Record<string, unknown>, props: string[]) {
         for (let i = 0; i < props.length; i++) {
             const p = props[i];
-            dst[p] = src[p];
+            try {
+                dst[p] = src[p];
+            } catch(e) {
+                const str = typeof e === 'string' ? e : e instanceof Error ? e.message : e;
+                if (typeof str === 'string' && str.includes('which has only a getter')) continue;
+                console.warn(str);
+            }
+        }
+    }
+
+    #copyStyle(src: Element, dst: Element) {
+        // remove potentially troublesome attributes
+        DragAndDropPolyfill.#rmvAtts.forEach(function (att) {
+            dst.removeAttribute(att);
+        });
+        // copy canvas content
+        if (src instanceof HTMLCanvasElement) {
+            const cSrc = src as unknown as HTMLCanvasElement;
+            const cDst = dst as unknown as HTMLCanvasElement;
+            cDst.width = cSrc.width;
+            cDst.height = cSrc.height;
+            cDst.getContext('2d')?.drawImage(cSrc, 0, 0);
+        }
+        // copy style (without transitions)
+        const cs = getComputedStyle(src);
+        for (let i = 0; i < cs.length; i++) {
+            const key = cs[i];
+            if (key.indexOf('transition') < 0) {
+                // @ts-ignore
+                dst.style[key] = cs[key];
+            }
+        }
+
+        const changedDST = dst as unknown as HTMLElement;
+        changedDST.style.pointerEvents = 'none';
+        // and repeat for all children
+        for (let i = 0; i < src.children.length; i++) {
+            this.#copyStyle(src.children[i], changedDST.children[i]);
         }
     }
 
@@ -127,10 +173,22 @@ class DragAndDropPolyfill {
             this.#destroyImage();
         }
 
-        if (!this.#imgCustom && !this.#dragSource) return;
+        if (!this.#imgCustom && !this.#dragSource) return;        
 
-        const imgNode = this.#imgCustom || this.#dragSource;
-        this.#img = imgNode?.cloneNode(true) as HTMLElement;
+        const src = (this.#imgCustom || this.#dragSource) as Element;
+        this.#img = src?.cloneNode(true) as HTMLElement;
+
+        this.#copyStyle(src, this.#img);
+        this.#img.style.top = this.#img.style.left = '-9999px';
+        // if creating from drag source, apply offset and opacity
+        if (!this.#imgCustom) {
+            const rc = src.getBoundingClientRect(), pt = this.#getPoint(e);
+            this.#imgOffset = { x: pt.x - rc.left, y: pt.y - rc.top };
+            this.#img.style.opacity = DragAndDropPolyfill.#OPACITY.toString();
+        }
+        // add image to document
+        this.#moveImage(e);
+        document.body.appendChild(this.#img);
     }
 
     #destroyImage() {
@@ -148,10 +206,10 @@ class DragAndDropPolyfill {
                 button: 0,
                 buttons: 1,
                 cancelable: true,
-                dataTransfer: this.#dataTransfer,
+                dataTransfer: this.dataTransfer as unknown as DataTransfer,
                 which: 1
             });
-            const t = e.touches ? e.touches[0] : e;
+            const t = e.touches && e.touches.length ? e.touches[0] : e;
             this.#copyProps(evt as unknown as Record<string, unknown>, e as unknown as Record<string, unknown>, DragAndDropPolyfill.#kbdProps);
             this.#copyProps(evt as unknown as Record<string, unknown>, t as unknown as Record<string, unknown>, DragAndDropPolyfill.#ptProps);
             target.dispatchEvent(evt);
@@ -194,6 +252,28 @@ class DragAndDropPolyfill {
         return el;
     }
 
+    get imgCustom() {
+        return this.#imgCustom;
+    }
+    set imgCustom(val: Node | null) {
+        this.#imgCustom = val;
+    }
+
+    get imgOffset() {
+        return this.#imgOffset;
+    }
+    set imgOffset(val: {x: number, y: number}) {
+        this.#imgOffset = val;
+    }
+
+    get dataTransfer() {
+        if (!this.#dataTransfer) this.dataTransfer = new DataTransfer();
+        return this.#dataTransfer;
+    }
+    set dataTransfer(val: DataTransfer) {
+        this.#dataTransfer = val;
+    }
+
     #moveImage(e: TouchEvent) {
         requestAnimationFrame(() => {
             if (this.#img) {
@@ -207,6 +287,33 @@ class DragAndDropPolyfill {
             }
         });
     }
+
+    #ontouchend (e: TouchEvent) {
+        if (this.#shouldHandle(e)) {
+            if (!this.#lastTouch) this.#lastTouch = e;
+            
+            // see if target wants to handle up
+            if (this.#dispatchEvent(this.#lastTouch as TouchEvent, 'mouseup', e.target)) {
+                e.preventDefault();
+                return;
+            }
+            // user clicked the element but didn't drag, so clear the source and simulate a click
+            if (!this.#img) {
+                this.#dragSource = null;
+                this.#dispatchEvent(this.#lastTouch as TouchEvent, 'click', e.target);
+                this.#lastClick = Date.now();
+            }
+            // finish dragging
+            this.#destroyImage();
+            if (this.#dragSource) {
+                if (e.type.indexOf('cancel') < 0 && this.#isDropZone) {
+                    this.#dispatchEvent(this.#lastTouch as TouchEvent, 'drop', this.#lastTarget);
+                }
+                this.#dispatchEvent(this.#lastTouch as TouchEvent, 'dragend', this.#dragSource);
+                this.#reset();
+            }
+        }
+    };
 
     #ontouchmove(e: TouchEvent) {
         if (this.#shouldCancelPressHoldMove(e)) {
@@ -345,5 +452,5 @@ class DragAndDropPolyfill {
 }
 
 
-const instance = new DragAndDropPolyfill();
+instance = new DragAndDropPolyfill();
 export default instance;
