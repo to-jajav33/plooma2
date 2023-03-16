@@ -2,59 +2,59 @@
 
 let instance: undefined | DragAndDropPolyfill = undefined;
 
-class DataTransferPolyfill {
-    #dropEffect: string;
-    #effectAllowed: string;
-    #data: Record<string, unknown>;
+// class DataTransferPolyfill {
+//     #dropEffect: string;
+//     #effectAllowed: string;
+//     #data: Record<string, unknown>;
 
-    constructor() {
-        this.#dropEffect = 'move';
-        this.#effectAllowed = 'all';
-        this.#data = {};
-    }
+//     constructor() {
+//         this.#dropEffect = 'move';
+//         this.#effectAllowed = 'all';
+//         this.#data = {};
+//     }
 
-    get dropEffect() {
-        return this.#dropEffect;
-    }
-    set dropEffect(val: string) {
-        this.#dropEffect = val;
-    }
+//     get dropEffect() {
+//         return this.#dropEffect;
+//     }
+//     set dropEffect(val: string) {
+//         this.#dropEffect = val;
+//     }
 
-    get effectAllowed() {
-        return this.#effectAllowed;
-    }
-    set effectAllowed(val: string) {
-        this.#effectAllowed = val;
-    }
+//     get effectAllowed() {
+//         return this.#effectAllowed;
+//     }
+//     set effectAllowed(val: string) {
+//         this.#effectAllowed = val;
+//     }
 
-    get types () {
-        return Object.keys(this.#data);
-    }
+//     get types () {
+//         return Object.keys(this.#data);
+//     }
 
-    clearData(type: string) {
-        if (type === undefined) return;
-        if (type !== null) {
-            delete this.#data[type.toLocaleLowerCase()];
-        } else {
-            this.#data = {};
-        }
-    }
+//     clearData(type: string) {
+//         if (type === undefined) return;
+//         if (type !== null) {
+//             delete this.#data[type.toLocaleLowerCase()];
+//         } else {
+//             this.#data = {};
+//         }
+//     }
 
-    getData(type: string) {
-        return this.#data[type.toLowerCase()] || '';
-    }
+//     getData(type: string) {
+//         return this.#data[type.toLowerCase()] || '';
+//     }
 
-    setData(type: string, value: unknown) {
-        this.#data[type.toLowerCase()] = value;
-    }
+//     setData(type: string, value: unknown) {
+//         this.#data[type.toLowerCase()] = value;
+//     }
 
-    setDragImage = function (img: HTMLImageElement, offsetX: number, offsetY: number) {
-        instance = instance || new DragAndDropPolyfill();
-        const ddp: DragAndDropPolyfill = instance;
-        ddp.imgCustom = img;
-        ddp.imgOffset = { x: offsetX, y: offsetY };
-    };
-}
+//     setDragImage = function (img: HTMLImageElement, offsetX: number, offsetY: number) {
+//         instance = instance || new DragAndDropPolyfill();
+//         const ddp: DragAndDropPolyfill = instance;
+//         ddp.imgCustom = img;
+//         ddp.imgOffset = { x: offsetX, y: offsetY };
+//     };
+// }
 
 class DragAndDropPolyfill {
     // @ts-ignore
