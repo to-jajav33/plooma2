@@ -1,5 +1,23 @@
 <template>
   <q-page class="row items-center justify-evenly">
+    <q-select
+      filled
+      v-model="model"
+      use-input
+      input-debounce="0"
+      label="Simple filter"
+      options="options"
+      @filter="filterFn"
+      style="width: 250px"
+    >
+      <template v-slot:no-option>
+        <q-item>
+          <q-item-section class="text-grey">
+            No results
+          </q-item-section>
+        </q-item>
+      </template>
+    </q-select>
     <q-btn @click="createProfile" color="primary" :disable="isBeginBtnDisabled" label="begin"></q-btn>
   </q-page>
 </template>
