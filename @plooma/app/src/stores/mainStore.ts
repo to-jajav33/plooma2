@@ -9,6 +9,7 @@ interface IProfiles {
   profileName: string,
   nodeUIDs: string[],
   timeline: string[],
+  stories: string[],
 }
 interface INodes {
   nodeUID: string,
@@ -17,11 +18,20 @@ interface INodes {
   nodeTitle: string
 }
 
-const DB_VERSION = 1;
+interface IStory {
+  profileName: string,
+  nodeUIDs: string[],
+  timeline: string[],
+  storyUID: string,
+  storyTitle: string,
+}
+
+const DB_VERSION = 2;
 class MainDatabase extends Dexie {
   lastState!: Dexie.Table<ILastState, string>
   profiles!: Dexie.Table<IProfiles, string>
   nodes!: Dexie.Table<INodes, string>
+  stories!: Dexie.Table<IStory, string>
 
   constructor() {
     super(MainDatabase.name);
@@ -29,7 +39,8 @@ class MainDatabase extends Dexie {
     this.version(DB_VERSION).stores({
       lastState: 'id, currentProfile',
       profiles: 'profileName, *nodeUIDs, *timeline',
-      nodes: 'nodeUID, profileName, htmlText, nodeTitle'
+      nodes: 'nodeUID, profileName, htmlText, nodeTitle',
+      stories: 'profileName, nodeUIDs, storyUID, storyTitle'
     });
   }
   
@@ -42,11 +53,12 @@ class MainDatabase extends Dexie {
     return parseInt(numberStr);
   }
   
-  async save(lastState: ILastState, profiles: IProfiles, nodes: INodes[]) {
+  async save(lastState: ILastState, profiles: IProfiles, nodes: INodes[], stories: IStory[]) {
     const bulkPut = [
       this.lastState.put(lastState),
       this.profiles.put(profiles),
-      this.nodes.bulkPut(nodes)
+      this.nodes.bulkPut(nodes),
+      this.stories.bulkPut(stories),
     ];
 
     await Promise.all(bulkPut);
@@ -69,6 +81,10 @@ class MainDatabase extends Dexie {
   async getTimelineOfProfileName(profileName: string) {
     return await this.profiles.get({profileName})
   }
+
+  async getStoriesOfProfileName(profileName: string) {
+    return await this.stories.where({profileName}).toArray();
+  }
 }
 
 const mainDatabase = new MainDatabase();
@@ -80,7 +96,8 @@ export const useMainStore = defineStore('MainStore', {
     currentProfile: 'default',
     profiles: {} as Record<string, {
         nodes: TypeNotePadNode,
-        timeline: Array<string>
+        timeline: Array<string>,
+        stories: IStory[]
       }>
   }),
 
@@ -96,11 +113,14 @@ export const useMainStore = defineStore('MainStore', {
       this.currentProfile = lastState?.currentProfile || 'default';
 
       const nodes = await mainDatabase.getNodesOfProfileName(this.currentProfile);
-      const timeline = (await mainDatabase.getTimelineOfProfileName(this.currentProfile))?.timeline;
+      const profile = (await mainDatabase.getTimelineOfProfileName(this.currentProfile));
+      const timeline = profile?.timeline;
+      const stories = await mainDatabase.getStoriesOfProfileName(this.currentProfile);
 
       this.profiles[this.currentProfile] = reactive({
         nodes: reactive(nodes || {}),
-        timeline: reactive(timeline || [])
+        timeline: reactive(timeline || []),
+        stories,
       });
     },
     async createProfile (params: {profileName: string}) {
@@ -113,34 +133,14 @@ export const useMainStore = defineStore('MainStore', {
         const keys = Object.keys(this.profiles[this.currentProfile].nodes);
         if (keys.length) return; // user already exists and has nodes, no need to create a profile
       }
+
       this.profiles[this.currentProfile] = reactive({
         nodes: {},
-        timeline: reactive([])
+        timeline: reactive([]),
+        stories: []
       });
 
-      // heroes journey template
-      // https://www.movieoutline.com/articles/the-hero-journey-mythic-structure-of-joseph-campbell-monomyth.html
-      const templateArr = [
-        {title: 'Ordinary World'},
-        {title: 'Call To Adventure'},
-        {title: 'Refusal'},
-        {title: 'Meeting with the Mentor'},
-        {title: 'Crossing the Threshold and accepts mission'},
-        {title: 'Challenges/Obstacles'},
-        {title: 'Learn what skills are needed the Greatest Challenge...Is the hero ready for the biggest challenge yet?'},
-        {title: 'Challenge to aquire a skill(s)... Mini Boss Battle'},
-        {title: 'Reward.. (hero acuqies skill(s) and transforms to a new state)'},
-        {title: 'Road Back... is/are the Reward/skill(s) going to help solve the conflict?'},
-        {title: 'Climax... Final boss battle'},
-        {title: 'Return to Ordinary World a changed person. Receives final reward/lesson/skill/gift/etc'},
-      ];
-
-      const skipLocalSave = true;
-      for (const i in templateArr) {
-        const templateInfo = templateArr[i];
-        const newNodeUID = this.createNewNode({profileName: this.currentProfile, nodeTitle: templateInfo.title});
-        this.addTimelineNodeAt(newNodeUID, Number(i), skipLocalSave);
-      }
+      this.createStory('Story With No Name');
 
       await this.saveLocal();
     },
@@ -161,6 +161,45 @@ export const useMainStore = defineStore('MainStore', {
       this.profiles[profileName].nodes[nodeUID] = newNode;
 
       return nodeUID;
+    },
+    createStory(title: string) {
+      const storyUid = uid();
+
+      // heroes journey template
+      // https://www.movieoutline.com/articles/the-hero-journey-mythic-structure-of-joseph-campbell-monomyth.html
+      const templateArr = [
+        {title: 'Ordinary World'},
+        {title: 'Call To Adventure'},
+        {title: 'Refusal'},
+        {title: 'Meeting with the Mentor'},
+        {title: 'Crossing the Threshold and accepts mission'},
+        {title: 'Challenges/Obstacles'},
+        {title: 'Learn what skills are needed the Greatest Challenge...Is the hero ready for the biggest challenge yet?'},
+        {title: 'Challenge to aquire a skill(s)... Mini Boss Battle'},
+        {title: 'Reward.. (hero acuqies skill(s) and transforms to a new state)'},
+        {title: 'Road Back... is/are the Reward/skill(s) going to help solve the conflict?'},
+        {title: 'Climax... Final boss battle'},
+        {title: 'Return to Ordinary World a changed person. Receives final reward/lesson/skill/gift/etc'},
+      ];
+
+      const skipLocalSave = true;
+      const nodeUIDs = [];
+      for (const i in templateArr) {
+        const templateInfo = templateArr[i];
+        const newNodeUID = this.createNewNode({profileName: this.currentProfile, nodeTitle: templateInfo.title});
+        nodeUIDs.push(newNodeUID);
+        this.addTimelineNodeAt(newNodeUID, Number(i), skipLocalSave);
+      }
+
+      this.profiles[this.currentProfile].stories.push({
+        storyUID: storyUid,
+        storyTitle: title,
+        nodeUIDs,
+        timeline: this.profiles[this.currentProfile].timeline,
+        profileName: this.currentProfile
+      });
+
+      return storyUid;
     },
     async exportTimeline() {
       const cleanStr = this.generateTimelineString();
@@ -199,6 +238,8 @@ export const useMainStore = defineStore('MainStore', {
       await this.saveLocal();
     },
     async saveLocal() {
+      const timeline = [...this.profiles[this.currentProfile].timeline];
+
       const nodes = [] as INodes[];
       for (const nodeUID in this.profiles[this.currentProfile].nodes) {
         const nodeInfo = this.profiles[this.currentProfile].nodes[nodeUID];
@@ -207,6 +248,18 @@ export const useMainStore = defineStore('MainStore', {
           nodeTitle: nodeInfo.nodeTitle,
           profileName: this.currentProfile,
           htmlText: nodeInfo.htmlText
+        });
+      }
+
+      const stories = [] as IStory[];
+      for (const storyUID in this.profiles[this.currentProfile].stories) {
+        const storyInfo = this.profiles[this.currentProfile].stories[storyUID];
+        stories.push({
+          storyUID,
+          profileName: this.currentProfile,
+          storyTitle: storyInfo.storyTitle,
+          nodeUIDs: nodes.map((info) => info.nodeUID),
+          timeline,
         });
       }
       
@@ -225,9 +278,11 @@ export const useMainStore = defineStore('MainStore', {
         {
           profileName: this.currentProfile,
           nodeUIDs: Object.keys(this.profiles[this.currentProfile].nodes),
-          timeline: [...this.profiles[this.currentProfile].timeline]
+          timeline,
+          stories: this.profiles[this.currentProfile].stories.map((info) => info.storyUID),
         },
-        nodes
+        nodes,
+        stories
       );
 
       notif({
