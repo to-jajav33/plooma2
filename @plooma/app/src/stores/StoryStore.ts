@@ -103,6 +103,17 @@ export class StoryStore extends Store {
   }
 
   /**
+   * Reorder nodes by moving a node from one index to another
+   */
+  reorderNodes(fromIndex: number, toIndex: number): void {
+    if (fromIndex === toIndex) return;
+
+    const [movedNode] = this.nodes.splice(fromIndex, 1);
+    this.nodes.splice(toIndex, 0, movedNode);
+    this.saveToStorage();
+  }
+
+  /**
    * Remove a node by ID
    */
   removeNode(id: string): void {
