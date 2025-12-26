@@ -10,6 +10,13 @@
   "author": "Jajav33 <to.jajav33@gmail.com>",
   "license": "MIT",
   "workspaces": [
-    "@plooma/app"
-  ]
+    "@plooma/app",
+    "@plooma/db",
+    "@plooma/auth",
+    "@plooma/store",
+    "@plooma/utils"
+  ],
+  "devDependencies": {
+    "bun": "^1.3.5"
+  }
 }
