@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export interface StoryNodeData {
   id: string;
+  name: string;
   content: string;
 }
 
@@ -21,7 +22,7 @@ export function StoryEditor({
   const [nodes, setNodes] = useState<StoryNodeData[]>(
     initialNodes.length > 0
       ? initialNodes
-      : [{ id: generateId(), content: "" }]
+      : [{ id: generateId(), name: "", content: "" }]
   );
 
   function generateId(): string {
@@ -40,10 +41,17 @@ export function StoryEditor({
     handleNodesChange(newNodes);
   };
 
+  const handleNodeNameChange = (id: string, name: string) => {
+    const newNodes = nodes.map((node) =>
+      node.id === id ? { ...node, name } : node
+    );
+    handleNodesChange(newNodes);
+  };
+
   const handleAddAbove = (index: number) => {
     const newNodes = [
       ...nodes.slice(0, index),
-      { id: generateId(), content: "" },
+      { id: generateId(), name: "", content: "" },
       ...nodes.slice(index),
     ];
     handleNodesChange(newNodes);
@@ -52,14 +60,14 @@ export function StoryEditor({
   const handleAddBelow = (index: number) => {
     const newNodes = [
       ...nodes.slice(0, index + 1),
-      { id: generateId(), content: "" },
+      { id: generateId(), name: "", content: "" },
       ...nodes.slice(index + 1),
     ];
     handleNodesChange(newNodes);
   };
 
   const handleAddFirst = () => {
-    const newNodes = [{ id: generateId(), content: "" }, ...nodes];
+    const newNodes = [{ id: generateId(), name: "", content: "" }, ...nodes];
     handleNodesChange(newNodes);
   };
 
@@ -85,7 +93,9 @@ export function StoryEditor({
           <StoryNode
             key={node.id}
             id={node.id}
+            name={node.name}
             content={node.content}
+            onNameChange={(name) => handleNodeNameChange(node.id, name)}
             onChange={(content) => handleNodeContentChange(node.id, content)}
             onAddAbove={() => handleAddAbove(index)}
             onAddBelow={() => handleAddBelow(index)}
@@ -97,4 +107,3 @@ export function StoryEditor({
     </Card>
   );
 }
-
