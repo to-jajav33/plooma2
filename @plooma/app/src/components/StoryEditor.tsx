@@ -36,6 +36,8 @@ export function StoryEditor({
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const setNodeRef = useCallback(
@@ -127,6 +129,38 @@ export function StoryEditor({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", "");
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      handleReorder(draggedIndex, dropIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto">
@@ -169,6 +203,14 @@ export function StoryEditor({
               onAddBelow={() => handleAddBelow(index)}
               isFirst={index === 0}
               isLast={index === nodes.length - 1}
+              index={index}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              isDragging={draggedIndex === index}
+              dragOverIndex={dragOverIndex}
             />
           ))}
         </CardContent>

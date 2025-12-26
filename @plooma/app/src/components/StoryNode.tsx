@@ -16,7 +16,14 @@ interface StoryNodeProps {
   isFirst?: boolean;
   isLast?: boolean;
   className?: string;
-  nodeRef?: React.RefObject<HTMLDivElement>;
+  index: number;
+  onDragStart: (e: React.DragEvent, index: number) => void;
+  onDragOver: (e: React.DragEvent, index: number) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, index: number) => void;
+  onDragEnd: () => void;
+  isDragging?: boolean;
+  dragOverIndex?: number | null;
 }
 
 export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
@@ -32,6 +39,14 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
       isFirst = false,
       isLast = false,
       className,
+      index,
+      onDragStart,
+      onDragOver,
+      onDragLeave,
+      onDrop,
+      onDragEnd,
+      isDragging = false,
+      dragOverIndex = null,
     },
     ref
   ) {
@@ -53,9 +68,50 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
         )}
 
         {/* Node container */}
-        <div className="flex gap-2 items-start">
-          {/* Drag handle (for future drag-and-drop) */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity pt-12 cursor-move">
+        <div
+          draggable
+          onDragStart={(e) => {
+            // Only allow dragging if not starting from an input or contentEditable
+            const target = e.target as HTMLElement;
+            if (
+              target.tagName === "INPUT" ||
+              target.tagName === "TEXTAREA" ||
+              target.isContentEditable ||
+              target.closest("[contenteditable]") ||
+              target.closest("input") ||
+              target.closest("textarea")
+            ) {
+              e.preventDefault();
+              return;
+            }
+            onDragStart(e, index);
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            onDragOver(e, index);
+          }}
+          onDragLeave={onDragLeave}
+          onDrop={(e) => {
+            e.preventDefault();
+            onDrop(e, index);
+          }}
+          onDragEnd={onDragEnd}
+          className={cn(
+            "flex gap-2 items-start transition-all rounded-lg p-2 -m-2",
+            "cursor-grab active:cursor-grabbing",
+            isDragging && "opacity-50 scale-95",
+            dragOverIndex === index &&
+              "ring-2 ring-primary ring-offset-2 bg-primary/5"
+          )}
+        >
+          {/* Drag handle */}
+          <div
+            className={cn(
+              "opacity-0 group-hover:opacity-100 transition-opacity pt-12 cursor-grab active:cursor-grabbing pointer-events-none",
+              isDragging && "opacity-100"
+            )}
+          >
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
 
@@ -68,6 +124,8 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="Node name (e.g., 'Ordinary World', 'Call to Adventure')"
               className="font-medium text-lg"
+              draggable={false}
+              onDragStart={(e) => e.stopPropagation()}
             />
 
             {/* WYSIWYG Editor */}
