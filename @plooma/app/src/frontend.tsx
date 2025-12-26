@@ -8,6 +8,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { registerServiceWorker } from "./lib/serviceWorker";
 
 const elem = document.getElementById("root")!;
 const app = (
@@ -23,4 +24,6 @@ if (import.meta.hot) {
 } else {
   // The hot module reloading API is not available in production.
   createRoot(elem).render(app);
+  // Register service worker for PWA
+  registerServiceWorker();
 }
