@@ -3,12 +3,11 @@ import { StoryNode } from "./StoryNode";
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { StoryStore } from "@plooma/store";
+import type { StoryNodeData } from "@plooma/store";
 
-export interface StoryNodeData {
-  id: string;
-  name: string;
-  content: string;
-}
+// Create a singleton instance of the store
+const storyStore = new StoryStore();
 
 interface StoryEditorProps {
   initialNodes?: StoryNodeData[];
@@ -19,56 +18,74 @@ export function StoryEditor({
   initialNodes = [],
   onNodesChange,
 }: StoryEditorProps) {
-  const [nodes, setNodes] = useState<StoryNodeData[]>(
-    initialNodes.length > 0
-      ? initialNodes
-      : [{ id: generateId(), name: "", content: "" }]
-  );
-
-  function generateId(): string {
-    return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
+  // Initialize from store or initialNodes
+  const [nodes, setNodes] = useState<StoryNodeData[]>(() => {
+    if (initialNodes.length > 0) {
+      storyStore.setNodes(initialNodes);
+      return initialNodes;
+    }
+    const storedNodes = storyStore.getNodes();
+    if (storedNodes.length > 0) {
+      return storedNodes;
+    }
+    storyStore.initializeIfEmpty();
+    return storyStore.getNodes();
+  });
 
   const handleNodesChange = (newNodes: StoryNodeData[]) => {
     setNodes(newNodes);
+    storyStore.setNodes(newNodes);
     onNodesChange?.(newNodes);
   };
 
   const handleNodeContentChange = (id: string, content: string) => {
-    const newNodes = nodes.map((node) =>
-      node.id === id ? { ...node, content } : node
-    );
-    handleNodesChange(newNodes);
+    storyStore.updateNodeContent(id, content);
+    const updatedNodes = storyStore.getNodes();
+    setNodes(updatedNodes);
+    onNodesChange?.(updatedNodes);
   };
 
   const handleNodeNameChange = (id: string, name: string) => {
-    const newNodes = nodes.map((node) =>
-      node.id === id ? { ...node, name } : node
-    );
-    handleNodesChange(newNodes);
+    storyStore.updateNodeName(id, name);
+    const updatedNodes = storyStore.getNodes();
+    setNodes(updatedNodes);
+    onNodesChange?.(updatedNodes);
   };
 
   const handleAddAbove = (index: number) => {
-    const newNodes = [
-      ...nodes.slice(0, index),
-      { id: generateId(), name: "", content: "" },
-      ...nodes.slice(index),
-    ];
-    handleNodesChange(newNodes);
+    const newNode: StoryNodeData = {
+      id: storyStore.generateId(),
+      name: "",
+      content: "",
+    };
+    storyStore.addNodeAt(index, newNode);
+    const updatedNodes = storyStore.getNodes();
+    setNodes(updatedNodes);
+    onNodesChange?.(updatedNodes);
   };
 
   const handleAddBelow = (index: number) => {
-    const newNodes = [
-      ...nodes.slice(0, index + 1),
-      { id: generateId(), name: "", content: "" },
-      ...nodes.slice(index + 1),
-    ];
-    handleNodesChange(newNodes);
+    const newNode: StoryNodeData = {
+      id: storyStore.generateId(),
+      name: "",
+      content: "",
+    };
+    storyStore.addNodeAt(index + 1, newNode);
+    const updatedNodes = storyStore.getNodes();
+    setNodes(updatedNodes);
+    onNodesChange?.(updatedNodes);
   };
 
   const handleAddFirst = () => {
-    const newNodes = [{ id: generateId(), name: "", content: "" }, ...nodes];
-    handleNodesChange(newNodes);
+    const newNode: StoryNodeData = {
+      id: storyStore.generateId(),
+      name: "",
+      content: "",
+    };
+    storyStore.addNodeAt(0, newNode);
+    const updatedNodes = storyStore.getNodes();
+    setNodes(updatedNodes);
+    onNodesChange?.(updatedNodes);
   };
 
   return (
