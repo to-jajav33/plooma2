@@ -1,4 +1,4 @@
-import { Store } from "./Store";
+import { Store } from "@plooma/store/src/Store";
 
 export interface StoryNodeData {
   id: string;

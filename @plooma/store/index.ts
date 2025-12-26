@@ -1,2 +1,2 @@
 export * from "./src/Store";
-export * from "./src/StoryStore";
+export * from "../app/src/stores/StoryStore";
