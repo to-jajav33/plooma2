@@ -1,6 +1,7 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { StoryNode } from "./StoryNode";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Plus, Map as MapIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "./ui/drawer";
@@ -32,6 +33,11 @@ export function StoryEditor({
     }
     storyStore.initializeIfEmpty();
     return storyStore.getNodes();
+  });
+
+  // Initialize title from store
+  const [title, setTitle] = useState<string>(() => {
+    return storyStore.getTitle();
   });
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -185,11 +191,27 @@ export function StoryEditor({
     }
   };
 
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    storyStore.setTitle(newTitle);
+    // Update page title
+    document.title = newTitle
+      ? `${newTitle} - Modular Story Editor`
+      : "Modular Story Editor";
+  };
+
+  // Update page title on mount and when title changes
+  useEffect(() => {
+    document.title = title
+      ? `${title} - Modular Story Editor`
+      : "Modular Story Editor";
+  }, [title]);
+
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <CardTitle>Modular Story Editor</CardTitle>
             <Button
               variant="outline"
@@ -199,6 +221,23 @@ export function StoryEditor({
               <MapIcon className="h-4 w-4 mr-2" />
               Minimap
             </Button>
+          </div>
+          {/* Story Title Input */}
+          <div className="space-y-2">
+            <label
+              htmlFor="story-title"
+              className="text-sm font-medium text-muted-foreground"
+            >
+              Story Title
+            </label>
+            <Input
+              id="story-title"
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="Enter your story title..."
+              className="text-2xl font-bold h-12"
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">

@@ -6,10 +6,9 @@ export interface StoryNodeData {
   content: string;
 }
 
-const STORAGE_KEY = "plooma-story-nodes";
-
 export class StoryStore extends Store {
-  private nodes: StoryNodeData[] = [];
+  nodes: StoryNodeData[] = [];
+  title: string = "";
 
   constructor() {
     super();
@@ -17,37 +16,27 @@ export class StoryStore extends Store {
   }
 
   /**
-   * Load nodes from localStorage
+   * Load store data from localStorage
    */
   private loadFromStorage(): void {
-    if (typeof window === "undefined") return;
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Validate that it's an array
-        if (Array.isArray(parsed)) {
-          this.nodes = parsed;
-        }
+    const stored = Store.loadFromStorage(StoryStore);
+    if (stored) {
+      // Restore nodes
+      if (Array.isArray(stored.nodes)) {
+        this.nodes = stored.nodes;
       }
-    } catch (error) {
-      console.error("Failed to load story nodes from localStorage:", error);
-      this.nodes = [];
+      // Restore title
+      if (typeof stored.title === "string") {
+        this.title = stored.title;
+      }
     }
   }
 
   /**
-   * Save nodes to localStorage
+   * Save store data to localStorage
    */
   private saveToStorage(): void {
-    if (typeof window === "undefined") return;
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.nodes));
-    } catch (error) {
-      console.error("Failed to save story nodes to localStorage:", error);
-    }
+    Store.saveToStorage(this);
   }
 
   /**
@@ -107,10 +96,14 @@ export class StoryStore extends Store {
    */
   reorderNodes(fromIndex: number, toIndex: number): void {
     if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= this.nodes.length) return;
+    if (toIndex < 0 || toIndex >= this.nodes.length) return;
 
     const [movedNode] = this.nodes.splice(fromIndex, 1);
-    this.nodes.splice(toIndex, 0, movedNode);
-    this.saveToStorage();
+    if (movedNode) {
+      this.nodes.splice(toIndex, 0, movedNode);
+      this.saveToStorage();
+    }
   }
 
   /**
@@ -144,5 +137,20 @@ export class StoryStore extends Store {
       this.nodes = [{ id: this.generateId(), name: "", content: "" }];
       this.saveToStorage();
     }
+  }
+
+  /**
+   * Get the story title
+   */
+  getTitle(): string {
+    return this.title;
+  }
+
+  /**
+   * Set the story title
+   */
+  setTitle(title: string): void {
+    this.title = title;
+    this.saveToStorage();
   }
 }
