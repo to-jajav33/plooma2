@@ -86,7 +86,14 @@ export class Store {
     return null;
   }
 
-  static proxy(StoreClass: typeof Store, key: string) {
+  static proxy(StoreClass: typeof Store = this, key: string = this.name) {
+    if (!key) {
+      throw new Error("Key is required");
+    }
+    if (!StoreClass) {
+      throw new Error("StoreClass is required");
+    }
+
     if (Store.proxies.has(key)) {
       return Store.proxies.get(key)!;
     }

@@ -36,7 +36,6 @@ export class StoryStore extends Store {
    * Save store data to localStorage
    */
   private saveToStorage(): void {
-    debugger;
     Store.saveToStorage(this);
   }
 
