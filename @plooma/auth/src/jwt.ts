@@ -86,7 +86,9 @@ export function verifyToken(token: string): JWTPayload | null {
  */
 function createSignature(data: string): string {
   // Simple hash for now - in production use proper HMAC-SHA256
-  const secret =
-    process.env.JWT_SECRET || "your-secret-key-change-in-production";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not set");
+  }
   return btoa(secret + data);
 }

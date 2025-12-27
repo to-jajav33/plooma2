@@ -20,6 +20,7 @@ async function serveStaticFile(path: string): Promise<Response | null> {
 }
 
 const server = serve({
+  port: parseInt(process.env.APP_PORT || "3000", 10),
   routes: {
     // Serve manifest.json
     "/manifest.json": async () => {
@@ -71,7 +72,7 @@ const server = serve({
       },
     },
 
-    "/api/hello/:name": async req => {
+    "/api/hello/:name": async (req) => {
       const name = req.params.name;
       return Response.json({
         message: `Hello, ${name}!`,

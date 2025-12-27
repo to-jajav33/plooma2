@@ -23,7 +23,8 @@ export async function POST(req: Request) {
     }
 
     // Initialize database
-    const db = new DBBackend("plooma");
+    const dbName = process.env.DB_NAME || "plooma";
+    const db = new DBBackend(dbName);
     const userTable = new User();
     userTable.create(db);
 

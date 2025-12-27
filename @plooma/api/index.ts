@@ -1,21 +1,28 @@
 import { FileSystemRouter, serve } from "bun";
 
+const PORT = parseInt(process.env.API_PORT || "3001", 10);
+// * for in .env.development, restrict in .env.production and by default
+const API_ORIGIN = `${process.env.API_ORIGIN || "http://localhost"}${
+  PORT || ":3001"
+}`;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || API_ORIGIN;
+
 const FileSystemRouterApi = new FileSystemRouter({
   dir: "./src/",
   style: "nextjs",
-  origin: "http://localhost:3000",
+  origin: API_ORIGIN,
   fileExtensions: [".ts", ".tsx", ".js", ".jsx"],
 });
 
 const server = serve({
-  port: 3001,
+  port: PORT,
   fetch: async (req) => {
     // Handle CORS
     if (req.method === "OPTIONS") {
       return new Response(null, {
         status: 200,
         headers: {
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": CORS_ORIGIN,
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
         },
@@ -41,7 +48,7 @@ const server = serve({
 
         // Add CORS headers to response
         const headers = new Headers(response.headers);
-        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Access-Control-Allow-Origin", CORS_ORIGIN);
         headers.set(
           "Access-Control-Allow-Methods",
           "GET, POST, PUT, DELETE, OPTIONS"
@@ -63,7 +70,7 @@ const server = serve({
             status: 405,
             headers: {
               "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Origin": CORS_ORIGIN,
             },
           }
         );
@@ -74,7 +81,7 @@ const server = serve({
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": CORS_ORIGIN,
         },
       });
     }
