@@ -36,3 +36,4 @@ The environment variables can be accessed via `process.env` in your code. Bun au
 - For production builds, set `NODE_ENV=production`
 - Update `API_URL` to point to your production API server when deploying
 
+

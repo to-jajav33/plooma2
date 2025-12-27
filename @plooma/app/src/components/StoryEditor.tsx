@@ -6,11 +6,11 @@ import { Plus, Map as MapIcon, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "./ui/drawer";
 import { StoryMinimap } from "./StoryMinimap";
-import { StoryStore } from "../stores/StoryStore";
-import type { StoryNodeData } from "../stores/StoryStore";
+import { StoryStore, type StoryNodeData } from "../stores/StoryStore";
 
 // Create a singleton instance of the store
-const storyStore = new StoryStore();
+console.log(StoryStore);
+const storyStore = StoryStore.proxy(StoryStore, "storyStore");
 
 interface StoryEditorProps {
   initialNodes?: StoryNodeData[];

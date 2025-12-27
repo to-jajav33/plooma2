@@ -92,3 +92,4 @@ function createSignature(data: string): string {
   }
   return btoa(secret + data);
 }
+

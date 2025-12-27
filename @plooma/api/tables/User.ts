@@ -7,3 +7,4 @@ export class User extends DBTable {
   createdAt = DBTable.type.datetime().notNull();
   updatedAt = DBTable.type.datetime().notNull();
 }
+

@@ -26,3 +26,4 @@ export async function verifyPassword(
   const passwordHash = await hashPassword(password);
   return passwordHash === hash;
 }
+

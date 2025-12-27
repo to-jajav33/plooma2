@@ -45,3 +45,4 @@ API_ORIGIN=http://localhost:3001
 - **JWT_SECRET**: This is critical for security. Use a strong, random string in production.
 - **CORS_ORIGIN**: In production, set this to your actual frontend domain instead of `*`
 - The `.env` file is already in `.gitignore` and won't be committed to version control
+
