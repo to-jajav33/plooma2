@@ -19,7 +19,7 @@ export class StoryStore extends Store {
    * Load store data from localStorage
    */
   private loadFromStorage(): void {
-    const stored = Store.loadFromStorage(StoryStore);
+    const stored = Store.loadFromStorage(this.constructor as typeof Store);
     if (stored) {
       // Restore nodes
       if (Array.isArray(stored.nodes)) {

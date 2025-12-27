@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { StoryNode } from "./StoryNode";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Plus, Map as MapIcon } from "lucide-react";
+import { Plus, Map as MapIcon, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "./ui/drawer";
 import { StoryMinimap } from "./StoryMinimap";
@@ -207,20 +207,150 @@ export function StoryEditor({
       : "Modular Story Editor";
   }, [title]);
 
+  const handlePrint = () => {
+    // Create a print-friendly HTML document
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to print your story.");
+      return;
+    }
+
+    // Helper function to escape HTML
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    // Build the print content
+    let printContent = "";
+
+    // Add title if it exists
+    if (title) {
+      printContent += `<h1 class="story-title">${escapeHtml(title)}</h1>`;
+    }
+
+    // Add each node's content (without node name)
+    nodes.forEach((node) => {
+      if (node.content && node.content.trim()) {
+        // Clean and format the HTML content
+        const cleanedContent = node.content;
+        printContent += `${cleanedContent}`;
+      }
+    });
+    // If no content, show a message
+    if (!printContent) {
+      printContent = '<p class="empty-message">No story content to print.</p>';
+    } else {
+      printContent = `<div class="node-content">${printContent}</div>`;
+    }
+
+    // Write the print document
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title || "Story"} - Print</title>
+          <meta charset="utf-8">
+          <style>
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              @page {
+                margin: 1in;
+                size: letter;
+              }
+              .node-content {
+                page-break-inside: avoid;
+              }
+              .node-content p {
+                orphans: 3;
+                widows: 3;
+              }
+            }
+            body {
+              font-family: 'Times New Roman', serif;
+              font-size: 12pt;
+              line-height: 1.6;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 40px 20px;
+              color: #000;
+              background: #fff;
+            }
+            .story-title {
+              text-align: center;
+              font-size: 2.5em;
+              margin-bottom: 2em;
+              font-weight: bold;
+              page-break-after: avoid;
+            }
+            .node-content {
+              margin-bottom: 2em;
+            }
+            .node-content p {
+              margin-bottom: 1em;
+              text-align: justify;
+              line-height: 1.6;
+            }
+            .node-content ul,
+            .node-content ol {
+              margin-bottom: 1em;
+              padding-left: 2em;
+            }
+            .node-content li {
+              margin-bottom: 0.5em;
+            }
+            .empty-message {
+              text-align: center;
+              color: #666;
+              font-style: italic;
+              margin-top: 3em;
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+
+    // Wait for content to load, then print
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 250);
+  };
+
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between mb-4">
             <CardTitle>Modular Story Editor</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDrawerOpen(true)}
-            >
-              <MapIcon className="h-4 w-4 mr-2" />
-              Minimap
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                title="Print story"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDrawerOpen(true)}
+              >
+                <MapIcon className="h-4 w-4 mr-2" />
+                Minimap
+              </Button>
+            </div>
           </div>
           {/* Story Title Input */}
           <div className="space-y-2">
