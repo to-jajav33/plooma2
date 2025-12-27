@@ -161,6 +161,30 @@ export function StoryEditor({
     setDragOverIndex(null);
   };
 
+  const handleDeleteNode = (id: string) => {
+    // Prevent deleting if it's the last node
+    if (nodes.length <= 1) {
+      if (
+        confirm(
+          "This is the last node. Delete it anyway? (You can add a new one later)"
+        )
+      ) {
+        storyStore.removeNode(id);
+        const updatedNodes = storyStore.getNodes();
+        setNodes(updatedNodes);
+        onNodesChange?.(updatedNodes);
+      }
+      return;
+    }
+
+    if (confirm("Are you sure you want to delete this node?")) {
+      storyStore.removeNode(id);
+      const updatedNodes = storyStore.getNodes();
+      setNodes(updatedNodes);
+      onNodesChange?.(updatedNodes);
+    }
+  };
+
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto">
@@ -201,6 +225,7 @@ export function StoryEditor({
               onChange={(content) => handleNodeContentChange(node.id, content)}
               onAddAbove={() => handleAddAbove(index)}
               onAddBelow={() => handleAddBelow(index)}
+              onDelete={() => handleDeleteNode(node.id)}
               isFirst={index === 0}
               isLast={index === nodes.length - 1}
               index={index}
@@ -226,6 +251,7 @@ export function StoryEditor({
               nodes={nodes}
               onNodeClick={handleNodeClick}
               onReorder={handleReorder}
+              onDelete={handleDeleteNode}
               activeNodeId={activeNodeId}
             />
           </DrawerBody>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
 import type { StoryNodeData } from "@plooma/store";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +8,7 @@ interface StoryMinimapProps {
   nodes: StoryNodeData[];
   onNodeClick: (nodeId: string) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  onDelete?: (nodeId: string) => void;
   activeNodeId?: string;
 }
 
@@ -14,6 +16,7 @@ export function StoryMinimap({
   nodes,
   onNodeClick,
   onReorder,
+  onDelete,
   activeNodeId,
 }: StoryMinimapProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -68,9 +71,8 @@ export function StoryMinimap({
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            onClick={() => onNodeClick(node.id)}
             className={cn(
-              "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all",
+              "flex items-center gap-2 p-2 rounded-md transition-all group",
               "hover:bg-accent hover:text-accent-foreground",
               "border border-transparent",
               isActive && "bg-primary/10 border-primary text-primary font-medium",
@@ -79,7 +81,26 @@ export function StoryMinimap({
             )}
           >
             <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="flex-1 text-sm truncate">{displayName}</span>
+            <span
+              className="flex-1 text-sm truncate cursor-pointer"
+              onClick={() => onNodeClick(node.id)}
+            >
+              {displayName}
+            </span>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(node.id);
+                }}
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                title="Delete node"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         );
       })}

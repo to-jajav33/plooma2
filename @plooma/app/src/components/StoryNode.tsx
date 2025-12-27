@@ -2,7 +2,7 @@ import React from "react";
 import { WYSIWYGEditor } from "./WYSIWYGEditor";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StoryNodeProps {
@@ -13,6 +13,7 @@ interface StoryNodeProps {
   onChange: (content: string) => void;
   onAddAbove: () => void;
   onAddBelow: () => void;
+  onDelete?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
   className?: string;
@@ -36,6 +37,7 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
       onChange,
       onAddAbove,
       onAddBelow,
+      onDelete,
       isFirst = false,
       isLast = false,
       className,
@@ -117,16 +119,32 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
 
           {/* Node content */}
           <div className="flex-1 space-y-2">
-            {/* Node name input */}
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              placeholder="Node name (e.g., 'Ordinary World', 'Call to Adventure')"
-              className="font-medium text-lg"
-              draggable={false}
-              onDragStart={(e) => e.stopPropagation()}
-            />
+            {/* Node name input with delete button */}
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="Node name (e.g., 'Ordinary World', 'Call to Adventure')"
+                className="font-medium text-lg flex-1"
+                draggable={false}
+                onDragStart={(e) => e.stopPropagation()}
+              />
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete node"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
 
             {/* WYSIWYG Editor */}
             <WYSIWYGEditor
