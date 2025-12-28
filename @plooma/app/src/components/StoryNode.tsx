@@ -71,24 +71,6 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
 
         {/* Node container */}
         <div
-          draggable
-          onDragStart={(e) => {
-            // Only allow dragging if not starting from an input or contentEditable
-            const target = e.target as HTMLElement;
-            if (
-              target.tagName === "INPUT" ||
-              target.tagName === "TEXTAREA" ||
-              target.isContentEditable ||
-              target.closest("[contenteditable]") ||
-              target.closest("input") ||
-              target.closest("textarea")
-            ) {
-              e.preventDefault();
-              return;
-            }
-            onDragStart(e, index);
-            e.dataTransfer.effectAllowed = "move";
-          }}
           onDragOver={(e) => {
             e.preventDefault();
             onDragOver(e, index);
@@ -98,21 +80,26 @@ export const StoryNode = React.forwardRef<HTMLDivElement, StoryNodeProps>(
             e.preventDefault();
             onDrop(e, index);
           }}
-          onDragEnd={onDragEnd}
           className={cn(
             "flex gap-2 items-start transition-all rounded-lg p-2 -m-2",
-            "cursor-grab active:cursor-grabbing",
             isDragging && "opacity-50 scale-95",
             dragOverIndex === index &&
               "ring-2 ring-primary ring-offset-2 bg-primary/5"
           )}
         >
-          {/* Drag handle */}
+          {/* Drag handle - only this is draggable */}
           <div
+            draggable
+            onDragStart={(e) => {
+              onDragStart(e, index);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragEnd={onDragEnd}
             className={cn(
-              "opacity-0 group-hover:opacity-100 transition-opacity pt-12 cursor-grab active:cursor-grabbing pointer-events-none",
+              "opacity-0 group-hover:opacity-100 transition-opacity pt-12 cursor-grab active:cursor-grabbing",
               isDragging && "opacity-100"
             )}
+            title="Drag to reorder"
           >
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
