@@ -64,9 +64,8 @@ export class Store {
    * Load store data from localStorage
    * Returns the parsed data or null if not found
    */
-  static loadFromStorage(
-    storeClass: typeof Store
-  ): Record<string, unknown> | null {
+  static loadFromStorage(): Record<string, unknown> | null {
+    const storeClass = this;
     if (typeof window === "undefined") return null;
 
     try {
