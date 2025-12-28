@@ -6,7 +6,11 @@ import { Plus, Map as MapIcon, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "./ui/drawer";
 import { StoryMinimap } from "./StoryMinimap";
+import { AdPlacement } from "./AdPlacement";
 import { StoryStore, type StoryNodeData } from "../stores/StoryStore";
+import { AD_CONFIG } from "../config/ads";
+import { AuthStore } from "../stores/AuthStore";
+import { useStore } from "@plooma/store";
 
 // Create a singleton instance of the store
 const storyStore = StoryStore.proxy<typeof StoryStore>();
@@ -20,6 +24,13 @@ export function StoryEditor({
   initialNodes = [],
   onNodesChange,
 }: StoryEditorProps) {
+  // Check if ads should be shown
+  const authStore = AuthStore.proxy<typeof AuthStore>();
+  const authState = useStore(authStore);
+  const showAds =
+    AD_CONFIG.enabled && (AD_CONFIG.guestsOnly ? authState.isGuest() : true);
+  AD_CONFIG.enabled && (AD_CONFIG.guestsOnly ? authStore.isGuest() : true);
+
   // Initialize from store or initialNodes
   const [nodes, setNodes] = useState<StoryNodeData[]>(() => {
     if (initialNodes.length > 0) {
@@ -326,88 +337,113 @@ export function StoryEditor({
   };
 
   return (
-    <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle>Modular Story Editor</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrint}
-                title="Print story"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDrawerOpen(true)}
-              >
-                <MapIcon className="h-4 w-4 mr-2" />
-                Minimap
-              </Button>
+    <div className="flex gap-6 items-start">
+      {/* Main content */}
+      <div className="flex-1">
+        <Card className="w-full max-w-4xl mx-auto">
+          <CardHeader>
+            <div className="flex items-center justify-between mb-4">
+              <CardTitle>Modular Story Editor</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrint}
+                  title="Print story"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDrawerOpen(true)}
+                >
+                  <MapIcon className="h-4 w-4 mr-2" />
+                  Minimap
+                </Button>
+              </div>
             </div>
-          </div>
-          {/* Story Title Input */}
-          <div className="space-y-2">
-            <label
-              htmlFor="story-title"
-              className="text-sm font-medium text-muted-foreground"
-            >
-              Story Title
-            </label>
-            <Input
-              id="story-title"
-              type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="Enter your story title..."
-              className="text-2xl font-bold h-12"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {nodes.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
-                No story nodes yet. Add your first node to get started!
-              </p>
-              <Button onClick={handleAddFirst}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Node
-              </Button>
+            {/* Story Title Input */}
+            <div className="space-y-2">
+              <label
+                htmlFor="story-title"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                Story Title
+              </label>
+              <Input
+                id="story-title"
+                type="text"
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="Enter your story title..."
+                className="text-2xl font-bold h-12"
+              />
             </div>
-          )}
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {nodes.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  No story nodes yet. Add your first node to get started!
+                </p>
+                <Button onClick={handleAddFirst}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Node
+                </Button>
+              </div>
+            )}
 
-          {nodes.map((node, index) => (
-            <StoryNode
-              key={node.id}
-              ref={(el) => setNodeRef(node.id, el)}
-              id={node.id}
-              name={node.name}
-              content={node.content}
-              onNameChange={(name) => handleNodeNameChange(node.id, name)}
-              onChange={(content) => handleNodeContentChange(node.id, content)}
-              onAddAbove={() => handleAddAbove(index)}
-              onAddBelow={() => handleAddBelow(index)}
-              onDelete={() => handleDeleteNode(node.id)}
-              isFirst={index === 0}
-              isLast={index === nodes.length - 1}
-              index={index}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onDragEnd={handleDragEnd}
-              isDragging={draggedIndex === index}
-              dragOverIndex={dragOverIndex}
-            />
-          ))}
-        </CardContent>
-      </Card>
+            {nodes.map((node, index) => (
+              <React.Fragment key={node.id}>
+                <StoryNode
+                  ref={(el) => setNodeRef(node.id, el)}
+                  id={node.id}
+                  name={node.name}
+                  content={node.content}
+                  onNameChange={(name) => handleNodeNameChange(node.id, name)}
+                  onChange={(content) =>
+                    handleNodeContentChange(node.id, content)
+                  }
+                  onAddAbove={() => handleAddAbove(index)}
+                  onAddBelow={() => handleAddBelow(index)}
+                  onDelete={() => handleDeleteNode(node.id)}
+                  isFirst={index === 0}
+                  isLast={index === nodes.length - 1}
+                  index={index}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggedIndex === index}
+                  dragOverIndex={dragOverIndex}
+                />
+                {/* Show ad between nodes (every 3rd node) */}
+                {showAds && index > 0 && (index + 1) % 3 === 0 && (
+                  <AdPlacement
+                    position="between-nodes"
+                    adClient={AD_CONFIG.adClient}
+                    adSlot={AD_CONFIG.adSlot}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sidebar ad */}
+      {showAds && (
+        <aside className="hidden lg:block w-48 flex-shrink-0">
+          <AdPlacement
+            position="sidebar"
+            adClient={AD_CONFIG.adClient}
+            adSlot={AD_CONFIG.adSlot}
+          />
+        </aside>
+      )}
 
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} side="right">
         <DrawerContent>
@@ -425,6 +461,6 @@ export function StoryEditor({
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-    </>
+    </div>
   );
 }
