@@ -219,7 +219,7 @@ export function StoryEditorSingleWysiwyg() {
   };
 
   // Handle automatic node creation when typing between }} {{
-  const handleBeforeInput = (e: React.FormEvent<HTMLDivElement>) => {
+  const handleBeforeInput = (e: React.InputEvent<HTMLDivElement>) => {
     if (!editorRef.current) return;
 
     const selection = window.getSelection();
@@ -231,26 +231,28 @@ export function StoryEditorSingleWysiwyg() {
 
     // Check if cursor is between "}} {{"
     if (cursorPos >= 3) {
-      const beforeCursor = text.substring(
-        Math.max(0, cursorPos - 3),
-        cursorPos
-      );
-      const afterCursor = text.substring(
-        cursorPos,
-        Math.min(text.length, cursorPos + 2)
-      );
+      const beforeCursor = text
+        .substring(Math.max(0, cursorPos - 3), cursorPos)
+        .trim();
+      const afterCursor = text
+        .substring(cursorPos, Math.min(text.length, cursorPos + 3))
+        .trim();
+      console.log("beforeCursor 1", beforeCursor);
+      console.log("afterCursor 1", afterCursor);
 
       // If we're typing between "}} " and "{{", create new node
-      if (beforeCursor === "}} " && afterCursor.startsWith("{{")) {
+      if (beforeCursor.endsWith("}}") && afterCursor.startsWith("{{")) {
         // Insert {{|}} at cursor position
         e.preventDefault();
 
         const newText =
-          text.substring(0, cursorPos) + "{{|}}" + text.substring(cursorPos);
+          text.substring(0, cursorPos) +
+          `{{${e.data}|}}` +
+          text.substring(cursorPos);
         editorRef.current.innerText = newText;
 
-        // Set cursor position after {{|
-        const newCursorPos = cursorPos + 3; // After "{{|"
+        // Set cursor position before {{|
+        const newCursorPos = cursorPos + 3; // Before "{{|"
         const newRange = document.createRange();
         const textNode = editorRef.current.firstChild;
         if (
