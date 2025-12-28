@@ -2,75 +2,62 @@ import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface AdBannerProps {
-  adSlot?: string;
-  adClient?: string;
-  format?: "auto" | "rectangle" | "horizontal" | "vertical";
+  zoneId?: string;
+  format?: "banner" | "native" | "popunder";
   className?: string;
   style?: React.CSSProperties;
 }
 
 /**
- * Ad Banner Component
- * Supports Google AdSense and other ad networks
+ * Ad Banner Component for Adsterra
  *
- * To use with Google AdSense:
- * 1. Set adClient to your AdSense publisher ID (e.g., "ca-pub-xxxxxxxxxx")
- * 2. Set adSlot to your ad slot ID (e.g., "1234567890")
+ * To use with Adsterra:
+ * 1. Get your zone ID from your Adsterra account
+ * 2. Set zoneId prop with your zone ID
  *
  * @example
  * <AdBanner
- *   adClient="ca-pub-xxxxxxxxxx"
- *   adSlot="1234567890"
- *   format="auto"
+ *   zoneId="12345678"
+ *   format="banner"
  * />
  */
 export function AdBanner({
-  adSlot,
-  adClient,
-  format = "auto",
+  zoneId,
+  format = "banner",
   className,
   style,
 }: AdBannerProps) {
   const adRef = useRef<HTMLDivElement>(null);
-  const adLoadedRef = useRef(false);
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!adRef.current || adLoadedRef.current) return;
-    if (!adClient || !adSlot) return;
+    if (!adRef.current || !zoneId) return;
 
-    // Google AdSense integration
-    const loadAd = () => {
-      if (window.adsbygoogle && Array.isArray(window.adsbygoogle)) {
-        try {
-          window.adsbygoogle.push({});
-          adLoadedRef.current = true;
-        } catch (error) {
-          console.error("Error loading ad:", error);
-        }
+    // Load Adsterra script only once
+    if (!scriptLoadedRef.current) {
+      const existingScript = document.querySelector(
+        'script[src*="delivery.adsterra.net"]'
+      );
+
+      if (!existingScript) {
+        const script = document.createElement("script");
+        script.src = "https://delivery.adsterra.net/invoke.js";
+        script.async = true;
+        script.onerror = () => {
+          console.error("Failed to load Adsterra script");
+        };
+        document.head.appendChild(script);
       }
-    };
 
-    // Check if AdSense script is already loaded
-    if (document.querySelector(`script[src*="adsbygoogle.js"]`)) {
-      // Script already loaded, just push the ad
-      loadAd();
-    } else {
-      // Load AdSense script
-      const script = document.createElement("script");
-      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`;
-      script.async = true;
-      script.crossOrigin = "anonymous";
-      script.onload = loadAd;
-      script.onerror = () => {
-        console.error("Failed to load AdSense script");
-      };
-      document.head.appendChild(script);
+      scriptLoadedRef.current = true;
     }
-  }, [adClient, adSlot]);
 
-  // If no ad client/slot provided, show placeholder for development
-  if (!adClient || !adSlot) {
-    debugger;
+    // Adsterra automatically detects divs with data-id attribute
+    // The script will fill the ad when it loads
+  }, [zoneId]);
+
+  // If no zone ID provided, show placeholder for development
+  if (!zoneId) {
     return (
       <div
         className={cn(
@@ -81,31 +68,19 @@ export function AdBanner({
       >
         <div>
           <p className="text-sm font-medium mb-1">Ad Space</p>
-          <p className="text-xs">
-            Configure adClient and adSlot to display ads
-          </p>
+          <p className="text-xs">Configure zoneId to display Adsterra ads</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={adRef} className={cn("ad-container", className)} style={style}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: "block" }}
-        data-ad-client={adClient}
-        data-ad-slot={adSlot}
-        data-ad-format={format}
-        data-full-width-responsive="true"
-      />
-    </div>
+    <div
+      ref={adRef}
+      className={cn("ad-container", className)}
+      style={style}
+      id={`adsterra-${zoneId}`}
+      data-id={zoneId}
+    />
   );
-}
-
-// Extend Window interface for AdSense
-declare global {
-  interface Window {
-    adsbygoogle?: Array<Record<string, unknown>>;
-  }
 }

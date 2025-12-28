@@ -1,17 +1,19 @@
 /**
- * Ad configuration
+ * Ad configuration for Adsterra
  * Set these environment variables or update directly for ad network integration
  */
 
-const adClient = process.env.BUN_PUBLIC_ADSENSE_CLIENT;
-const adSlot = process.env.BUN_PUBLIC_ADSENSE_SLOT;
+const zoneId = process.env.BUN_PUBLIC_ADSTERRA_ZONE_ID;
+const sidebarZoneId = process.env.BUN_PUBLIC_ADSTERRA_SIDEBAR_ZONE_ID;
 const enabled = process.env.BUN_PUBLIC_ADS_ENABLED;
 const guestsOnly = process.env.BUN_PUBLIC_ADS_GUESTS_ONLY;
 
 export const AD_CONFIG = {
-  // Google AdSense
-  adClient: adClient || "",
-  adSlot: adSlot || "",
+  // Adsterra Zone IDs
+  // Main zone ID for between-nodes ads
+  zoneId: zoneId || "",
+  // Sidebar zone ID (can be same as zoneId or different)
+  sidebarZoneId: sidebarZoneId || zoneId || "",
 
   // Enable/disable ads
   enabled: enabled === "true",

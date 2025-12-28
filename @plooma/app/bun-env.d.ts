@@ -9,8 +9,10 @@ declare global {
       BUN_PUBLIC_APP_PORT: string;
       BUN_PUBLIC_ADSENSE_CLIENT: string;
       BUN_PUBLIC_ADSENSE_SLOT: string;
-      BUN_PUBLIC_ADS_ENABLED: string;
-      BUN_PUBLIC_ADS_GUESTS_ONLY: string;
+      BUN_PUBLIC_ADS_ENABLED: "true" | "false";
+      BUN_PUBLIC_ADS_GUESTS_ONLY: "true" | "false";
+      BUN_PUBLIC_ADSTERRA_ZONE_ID: string;
+      BUN_PUBLIC_ADSTERRA_SIDEBAR_ZONE_ID: string;
     }
   }
 }

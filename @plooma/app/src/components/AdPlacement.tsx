@@ -4,35 +4,25 @@ import { cn } from "@/lib/utils";
 
 interface AdPlacementProps {
   position: "sidebar" | "between-nodes" | "header" | "footer";
-  adClient?: string;
-  adSlot?: string;
+  zoneId?: string;
   className?: string;
 }
 
 /**
  * Pre-configured ad placements for common locations
  */
-export function AdPlacement({
-  position,
-  adClient,
-  adSlot,
-  className,
-}: AdPlacementProps) {
+export function AdPlacement({ position, zoneId, className }: AdPlacementProps) {
   const config = {
     sidebar: {
-      format: "vertical" as const,
       style: { minWidth: "160px", minHeight: "600px" },
     },
     "between-nodes": {
-      format: "horizontal" as const,
       style: { width: "100%", minHeight: "100px" },
     },
     header: {
-      format: "horizontal" as const,
       style: { width: "100%", minHeight: "90px" },
     },
     footer: {
-      format: "horizontal" as const,
       style: { width: "100%", minHeight: "90px" },
     },
   };
@@ -42,9 +32,8 @@ export function AdPlacement({
   return (
     <div className={cn("ad-placement", className)}>
       <AdBanner
-        adClient={adClient}
-        adSlot={adSlot}
-        format={placementConfig.format}
+        zoneId={zoneId}
+        format="banner"
         style={placementConfig.style}
         className={cn(
           position === "sidebar" && "sticky top-4",
@@ -54,4 +43,3 @@ export function AdPlacement({
     </div>
   );
 }
-

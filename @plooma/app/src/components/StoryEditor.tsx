@@ -29,7 +29,6 @@ export function StoryEditor({
   const authState = useStore(authStore);
   const showAds =
     AD_CONFIG.enabled && (AD_CONFIG.guestsOnly ? authState.isGuest() : true);
-  AD_CONFIG.enabled && (AD_CONFIG.guestsOnly ? authStore.isGuest() : true);
 
   // Initialize from store or initialNodes
   const [nodes, setNodes] = useState<StoryNodeData[]>(() => {
@@ -424,8 +423,7 @@ export function StoryEditor({
                 {showAds && index > 0 && (index + 1) % 3 === 0 && (
                   <AdPlacement
                     position="between-nodes"
-                    adClient={AD_CONFIG.adClient}
-                    adSlot={AD_CONFIG.adSlot}
+                    zoneId={AD_CONFIG.zoneId}
                   />
                 )}
               </React.Fragment>
@@ -437,11 +435,7 @@ export function StoryEditor({
       {/* Sidebar ad */}
       {showAds && (
         <aside className="hidden lg:block w-48 flex-shrink-0">
-          <AdPlacement
-            position="sidebar"
-            adClient={AD_CONFIG.adClient}
-            adSlot={AD_CONFIG.adSlot}
-          />
+          <AdPlacement position="sidebar" zoneId={AD_CONFIG.sidebarZoneId} />
         </aside>
       )}
 
