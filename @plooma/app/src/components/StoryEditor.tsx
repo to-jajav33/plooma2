@@ -11,6 +11,7 @@ import { StoryStore, type StoryNodeData } from "../stores/StoryStore";
 import { AD_CONFIG } from "../config/ads";
 import { AuthStore } from "../stores/AuthStore";
 import { useStore } from "@plooma/store";
+import { cn } from "@/lib/utils";
 
 // Create a singleton instance of the store
 const storyStore = StoryStore.proxy<typeof StoryStore>();
@@ -341,27 +342,8 @@ export function StoryEditor({
       <div className="flex-1">
         <Card className="w-full max-w-4xl mx-auto">
           <CardHeader>
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <CardTitle>Modular Story Editor</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrint}
-                  title="Print story"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsDrawerOpen(true)}
-                >
-                  <MapIcon className="h-4 w-4 mr-2" />
-                  Minimap
-                </Button>
-              </div>
             </div>
             {/* Story Title Input */}
             <div className="space-y-2">
@@ -455,6 +437,33 @@ export function StoryEditor({
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      {/* Floating Action Buttons */}
+      <div
+        className={cn(
+          "fixed bottom-6 z-50 flex flex-col gap-3 transition-all",
+          showAds ? "left-3 lg:left-[calc(1rem+1.5rem)]" : "left-3"
+        )}
+      >
+        <Button
+          variant="default"
+          size="icon-lg"
+          onClick={handlePrint}
+          title="Print story"
+          className="rounded-full shadow-lg hover:shadow-xl transition-shadow h-14 w-14"
+        >
+          <Printer className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="default"
+          size="icon-lg"
+          onClick={() => setIsDrawerOpen(true)}
+          title="Open minimap"
+          className="rounded-full shadow-lg hover:shadow-xl transition-shadow h-14 w-14"
+        >
+          <MapIcon className="h-5 w-5" />
+        </Button>
+      </div>
     </div>
   );
 }
