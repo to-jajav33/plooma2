@@ -141,6 +141,201 @@ export function StoryEditorSingleWysiwyg() {
     }
   }, []);
 
+  // Get cursor position and determine if it's in a title or content portion
+  const getCursorPosition = (): {
+    inTitle: boolean;
+    inContent: boolean;
+    nodeIndex: number | null;
+  } => {
+    if (!editorRef.current) {
+      return { inTitle: false, inContent: false, nodeIndex: null };
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return { inTitle: false, inContent: false, nodeIndex: null };
+    }
+
+    const range = selection.getRangeAt(0);
+    const text = editorRef.current.innerText || "";
+    const html = editorRef.current.innerHTML;
+
+    // Find all node patterns
+    const nodePattern = /\{\{([^|{}]+)\|/g;
+    const matches: Array<{
+      name: string;
+      start: number;
+      pipeIndex: number;
+      end: number;
+    }> = [];
+    let match;
+
+    while ((match = nodePattern.exec(html)) !== null) {
+      if (!match[1]) continue;
+      const pipeIndex = match.index + match[0].length - 1;
+      const contentStart = pipeIndex + 1;
+      const contentEnd = html.indexOf("}}", contentStart);
+
+      matches.push({
+        name: match[1].trim(),
+        start: match.index,
+        pipeIndex,
+        end: contentEnd > contentStart ? contentEnd + 2 : html.length,
+      });
+    }
+
+    // Get cursor position in text
+    const textBeforeCursor = text.substring(0, range.startOffset);
+
+    // Find which node the cursor is in
+    for (let i = 0; i < matches.length; i++) {
+      const nodeMatch = matches[i];
+      if (!nodeMatch) continue;
+
+      // Find the corresponding position in text
+      const textBeforeNode = text.substring(0, nodeMatch.start);
+      const nodeText = text.substring(nodeMatch.start, nodeMatch.end);
+
+      if (
+        textBeforeCursor.length >= textBeforeNode.length &&
+        textBeforeCursor.length < textBeforeNode.length + nodeText.length
+      ) {
+        // Cursor is in this node
+        const positionInNode = textBeforeCursor.length - textBeforeNode.length;
+        const titleText = `{{${nodeMatch.name}|`;
+        const titleLength = titleText.length;
+
+        if (positionInNode < titleLength) {
+          // In title portion
+          return { inTitle: true, inContent: false, nodeIndex: i };
+        } else {
+          // In content portion
+          return { inTitle: false, inContent: true, nodeIndex: i };
+        }
+      }
+    }
+
+    return { inTitle: false, inContent: false, nodeIndex: null };
+  };
+
+  // Handle automatic node creation when typing between }} {{
+  const handleBeforeInput = (e: React.FormEvent<HTMLDivElement>) => {
+    if (!editorRef.current) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const text = editorRef.current.innerText || "";
+    const cursorPos = range.startOffset;
+
+    // Check if cursor is between "}} {{"
+    if (cursorPos >= 3) {
+      const beforeCursor = text.substring(
+        Math.max(0, cursorPos - 3),
+        cursorPos
+      );
+      const afterCursor = text.substring(
+        cursorPos,
+        Math.min(text.length, cursorPos + 2)
+      );
+
+      // If we're typing between "}} " and "{{", create new node
+      if (beforeCursor === "}} " && afterCursor.startsWith("{{")) {
+        // Insert {{|}} at cursor position
+        e.preventDefault();
+
+        const newText =
+          text.substring(0, cursorPos) + "{{|}}" + text.substring(cursorPos);
+        editorRef.current.innerText = newText;
+
+        // Set cursor position after {{|
+        const newCursorPos = cursorPos + 3; // After "{{|"
+        const newRange = document.createRange();
+        const textNode = editorRef.current.firstChild;
+        if (
+          textNode &&
+          textNode.nodeType === Node.TEXT_NODE &&
+          textNode.textContent
+        ) {
+          const maxPos = Math.min(newCursorPos, textNode.textContent.length);
+          newRange.setStart(textNode, maxPos);
+          newRange.setEnd(textNode, maxPos);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+
+        handleInput();
+      }
+    }
+  };
+
+  // Handle Enter key - prevent newlines in title, jump to content
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      const cursorPos = getCursorPosition();
+
+      if (cursorPos.inTitle) {
+        // Prevent newline and jump to content portion
+        e.preventDefault();
+
+        if (!editorRef.current || cursorPos.nodeIndex === null) return;
+
+        const html = editorRef.current.innerHTML;
+        const nodePattern = /\{\{([^|{}]+)\|/g;
+        const matches: Array<{ pipeIndex: number; contentStart: number }> = [];
+        let match;
+        let nodeCount = 0;
+
+        while ((match = nodePattern.exec(html)) !== null) {
+          if (nodeCount === cursorPos.nodeIndex) {
+            const pipeIndex = match.index + match[0].length - 1;
+            const contentStart = pipeIndex + 1;
+            matches.push({ pipeIndex, contentStart });
+            break;
+          }
+          nodeCount++;
+        }
+
+        if (matches.length > 0 && matches[0]) {
+          const { contentStart } = matches[0];
+
+          // Find the text position corresponding to contentStart
+          const text = editorRef.current.innerText || "";
+          const htmlBeforeContent = html.substring(0, contentStart);
+          const textBeforeContent = htmlBeforeContent.replace(/<[^>]*>/g, "");
+
+          // Set cursor to content start
+          const range = document.createRange();
+          const selection = window.getSelection();
+
+          // Find the text node and position
+          const walker = document.createTreeWalker(
+            editorRef.current,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+
+          let textNode;
+          let offset = 0;
+          while ((textNode = walker.nextNode())) {
+            const nodeLength = textNode.textContent?.length || 0;
+            if (offset + nodeLength >= textBeforeContent.length) {
+              const posInNode = textBeforeContent.length - offset;
+              range.setStart(textNode, Math.max(0, posInNode));
+              range.setEnd(textNode, Math.max(0, posInNode));
+              selection?.removeAllRanges();
+              selection?.addRange(range);
+              break;
+            }
+            offset += nodeLength;
+          }
+        }
+      }
+      // If in content, allow normal Enter behavior (default)
+    }
+  };
+
   const handleInput = () => {
     if (editorRef.current) {
       const html = editorRef.current.innerHTML;
@@ -322,6 +517,8 @@ export function StoryEditorSingleWysiwyg() {
                 ref={editorRef}
                 contentEditable
                 onInput={handleInput}
+                onBeforeInput={handleBeforeInput}
+                onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 className={cn(
