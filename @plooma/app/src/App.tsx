@@ -1,5 +1,5 @@
 import "./index.css";
-import { StoryEditor } from "./components/StoryEditor";
+import { EditorPage } from "./components/EditorPage";
 import { AuthPage } from "./components/AuthPage";
 import { useRouter } from "./lib/router";
 import { AuthStore } from "./stores/AuthStore";
@@ -38,11 +38,7 @@ export function App() {
     if (!authState.hasMode()) {
       return null; // Will redirect in useEffect
     }
-    return (
-      <div className="container mx-auto p-8">
-        <StoryEditor />
-      </div>
-    );
+    return <EditorPage />;
   }
 
   // Show auth page on root
