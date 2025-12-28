@@ -4,23 +4,25 @@ import { AuthPage } from "./components/AuthPage";
 import { useRouter } from "./lib/router";
 import { AuthStore } from "./stores/AuthStore";
 import { useEffect, useState } from "react";
+import { useStore } from "@plooma/store";
 
 export function App() {
   const { path, navigate } = useRouter();
-  const [authStore] = useState(() => new AuthStore());
+  const authStore = AuthStore.proxy<typeof AuthStore>();
+  const authState = useStore(authStore);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // Initial route check - only run once
     if (!isReady) {
-      if (authStore.hasMode() && path === "/") {
+      if (authState.hasMode() && path === "/") {
         navigate("/editor");
-      } else if (!authStore.hasMode() && path === "/editor") {
+      } else if (!authState.hasMode() && path === "/editor") {
         navigate("/");
       }
       setIsReady(true);
     }
-  }, [authStore, path, navigate, isReady]);
+  }, [authState, path, navigate, isReady]);
 
   const handleAuthSuccess = () => {
     navigate("/editor");
@@ -33,8 +35,7 @@ export function App() {
   // Show auth page on root, editor on /editor
   if (path === "/editor") {
     // Only show editor if user is authenticated or in guest mode
-    if (!authStore.hasMode()) {
-      debugger;
+    if (!authState.hasMode()) {
       return null; // Will redirect in useEffect
     }
     return (

@@ -32,7 +32,7 @@ export function AuthPage({ onAuthSuccess }: AuthPageProps) {
   const [signupPassword, setSignupPassword] = useState("");
 
   // Use singleton instance
-  const [authStore] = useState(() => new AuthStore());
+  const authStore = AuthStore.proxy<typeof AuthStore>();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

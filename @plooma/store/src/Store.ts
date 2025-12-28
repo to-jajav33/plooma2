@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 export class Store {
   static proxies = new Map<string, any>();
 
@@ -6,8 +8,8 @@ export class Store {
   /**
    * Get the storage key for this store class
    */
-  static getStorageKey(storeClass: typeof Store): string {
-    return `@@plooma@@${storeClass.name}`;
+  static getStorageKey(): string {
+    return `@@plooma@@${this.name}`;
   }
 
   /**
@@ -20,7 +22,7 @@ export class Store {
     try {
       const storeData: Record<string, unknown> = {};
       const storeClass = storeInstance.constructor as typeof Store;
-      const storageKey = Store.getStorageKey(storeClass);
+      const storageKey = storeClass.getStorageKey();
       const processedKeys = new Set<string>();
 
       // Get all own properties (including those defined with Object.defineProperty)
@@ -69,7 +71,7 @@ export class Store {
     if (typeof window === "undefined") return null;
 
     try {
-      const storageKey = Store.getStorageKey(storeClass);
+      const storageKey = storeClass.getStorageKey();
       const stored = localStorage.getItem(storageKey);
 
       if (stored) {
@@ -85,7 +87,19 @@ export class Store {
     return null;
   }
 
-  static proxy(StoreClass: typeof Store = this, key: string = this.name) {
+  /**
+   * Create a proxy for the store
+   * Returns instance of the store that calls its methods directly
+   *
+   * @example
+   * AuthStore is a class that extends Store
+   * const store = AuthStore.proxy();
+   * store.setAuthenticated("token", "user");
+   */
+  static proxy<T extends typeof Store>(
+    StoreClass: T = this as unknown as T,
+    key: string = this.getStorageKey()
+  ): InstanceType<T> {
     if (!key) {
       throw new Error("Key is required");
     }
@@ -97,32 +111,8 @@ export class Store {
       return Store.proxies.get(key)!;
     }
 
-    const store = new StoreClass();
-    Store.proxies.set(
-      key,
-      new Proxy(store, {
-        get: (target, prop) => {
-          if (
-            typeof target[prop as keyof typeof target] === "function" &&
-            (target[prop as keyof typeof target] as any)
-              .$$ploomaStoreFunction === true
-          ) {
-            const oldFunction = target[prop as keyof typeof target] as Function;
-            const newFunction = (...args: unknown[]) => {
-              return oldFunction(...args);
-            };
-
-            newFunction.$$ploomaStoreFunction = true;
-            return newFunction;
-          }
-          return target[prop as keyof typeof target];
-        },
-        set: (target, prop, value) => {
-          target[prop as keyof typeof target] = value as never;
-          return true;
-        },
-      })
-    );
+    const store = proxy(new StoreClass()) as InstanceType<T>;
+    Store.proxies.set(key, store);
     return store;
   }
 }

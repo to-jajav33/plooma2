@@ -9,7 +9,7 @@ import { StoryMinimap } from "./StoryMinimap";
 import { StoryStore, type StoryNodeData } from "../stores/StoryStore";
 
 // Create a singleton instance of the store
-const storyStore = StoryStore.proxy();
+const storyStore = StoryStore.proxy<typeof StoryStore>();
 
 interface StoryEditorProps {
   initialNodes?: StoryNodeData[];

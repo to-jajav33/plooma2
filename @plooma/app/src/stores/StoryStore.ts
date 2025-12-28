@@ -10,6 +10,13 @@ export class StoryStore extends Store {
   nodes: StoryNodeData[] = [];
   title: string = "";
 
+  /**
+   * Bun hot reload fix
+   */
+  static override get name(): string {
+    return "StoryStore";
+  }
+
   constructor() {
     super();
     this.loadFromStorage();
@@ -36,7 +43,7 @@ export class StoryStore extends Store {
    * Save store data to localStorage
    */
   private saveToStorage(): void {
-    Store.saveToStorage(this);
+    StoryStore.saveToStorage(this);
   }
 
   /**

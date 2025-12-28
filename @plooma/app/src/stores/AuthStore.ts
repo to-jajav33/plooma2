@@ -13,6 +13,13 @@ export class AuthStore extends Store {
   token: string = "";
   user: AuthUser | null = null;
 
+  /**
+   * Bun hot reload fix
+   */
+  static override get name(): string {
+    return "AuthStore";
+  }
+
   constructor() {
     super();
     this.loadFromStorage();
@@ -36,7 +43,7 @@ export class AuthStore extends Store {
    * Save auth data to localStorage
    */
   private saveToStorage(): void {
-    Store.saveToStorage(this);
+    AuthStore.saveToStorage(this);
   }
 
   /**
