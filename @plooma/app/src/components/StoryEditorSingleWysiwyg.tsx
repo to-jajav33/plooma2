@@ -38,7 +38,7 @@ export function StoryEditorSingleWysiwyg() {
     setTitle(storeTitle || "");
 
     // Combine all nodes into a single content string
-    // Format: {{nodeName|nodeContent}}
+    // Format: <span data-node-id="id">{{nodeName|nodeContent}}</span>
     if (nodes.length > 0) {
       const combinedContent = nodes
         .map((node) => {
@@ -46,7 +46,7 @@ export function StoryEditorSingleWysiwyg() {
           const nodeContent = node.content || "";
           // Escape any }} in content to avoid breaking the pattern
           const escapedContent = nodeContent.replace(/\}\}/g, "&#125;&#125;");
-          return `{{${nodeName}|${escapedContent}}}`;
+          return `<span data-node-id="${node.id}">{{${nodeName}|${escapedContent}}}</span>`;
         })
         .join("\n\n");
       setContent(combinedContent);
@@ -76,62 +76,84 @@ export function StoryEditorSingleWysiwyg() {
   const parseAndSaveNodes = useCallback((html: string) => {
     if (!editorRef.current) return;
 
-    // Match pattern: {{title|content}} in HTML
-    // We use a more robust pattern that handles HTML content
-    const nodePattern = /\{\{([^|{}]+)\|/g;
-    const nodes: Array<{ name: string; content: string }> = [];
+    // Find all spans with data-node-id that contain node patterns
+    // Format: <span data-node-id="id">{{title|content}}</span>
+    const spanPattern = /<span[^>]*data-node-id="([^"]+)"[^>]*>(.*?)<\/span>/g;
+    const nodes: Array<{ id: string; name: string; content: string }> = [];
     let match;
-    const matches: Array<{ name: string; start: number; pipeIndex: number }> =
-      [];
 
-    // Find all opening patterns
-    while ((match = nodePattern.exec(html)) !== null) {
-      matches.push({
-        name: match?.[1]?.trim() || "",
-        start: match.index,
-        pipeIndex: match.index + match[0].length - 1, // Position of |
-      });
-    }
+    while ((match = spanPattern.exec(html)) !== null) {
+      const nodeId = match[1];
+      const spanContent = match[2];
 
-    // Extract content for each match
-    matches.forEach((matchInfo, index) => {
-      const contentStart = matchInfo.pipeIndex + 1;
-      // Find the closing }} - look for the first }} after the content start
-      // that's not part of an HTML entity
-      let contentEnd = html.indexOf("}}", contentStart);
+      if (!nodeId || !spanContent) continue;
 
-      // If we found a closing tag, extract the content
-      if (contentEnd > contentStart) {
-        let nodeContent = html.substring(contentStart, contentEnd);
+      // Extract node pattern from span content: {{title|content}}
+      const nodePattern = /\{\{([^|{}]+)\|([^}]*)\}\}/;
+      const nodeMatch = spanContent.match(nodePattern);
+
+      if (nodeMatch && nodeMatch[1] && nodeMatch[2] !== undefined) {
+        const nodeName = nodeMatch[1].trim() || "Untitled";
+        let nodeContent = nodeMatch[2] || "";
         // Unescape any }} that were escaped
-        nodeContent = nodeContent.replace(/&#125;&#125;/g, "}}");
+        nodeContent = nodeContent.replace(/&#125;&#125;/g, "}}").trim();
 
         nodes.push({
-          name: matchInfo.name || "Untitled",
-          content: nodeContent.trim(),
-        });
-      } else if (index === matches.length - 1) {
-        // Last match might not have closing }}, take everything after |
-        let nodeContent = html.substring(contentStart);
-        nodeContent = nodeContent.replace(/&#125;&#125;/g, "}}");
-        nodes.push({
-          name: matchInfo.name || "Untitled",
-          content: nodeContent.trim(),
+          id: nodeId,
+          name: nodeName,
+          content: nodeContent,
         });
       }
-    });
+    }
+
+    // Also find any node patterns not wrapped in spans (for backward compatibility or new nodes)
+    const nodePattern = /\{\{([^|{}]+)\|([^}]*)\}\}/g;
+    let nodeMatch;
+    const existingIds = new Set(nodes.map((n) => n.id));
+
+    while ((nodeMatch = nodePattern.exec(html)) !== null) {
+      // Check if this node is already captured in a span
+      const matchStart = nodeMatch.index;
+      const matchEnd = matchStart + nodeMatch[0].length;
+
+      // Check if this match is inside any of the spans we already found
+      let isInsideSpan = false;
+      for (const spanMatch of html.matchAll(
+        /<span[^>]*data-node-id="([^"]+)"[^>]*>/g
+      )) {
+        const spanStart = spanMatch.index || 0;
+        const spanEnd = html.indexOf("</span>", spanStart);
+        if (spanStart <= matchStart && matchEnd <= spanEnd) {
+          isInsideSpan = true;
+          break;
+        }
+      }
+
+      if (!isInsideSpan && nodeMatch[1] && nodeMatch[2] !== undefined) {
+        // This is a node not wrapped in a span - create new ID
+        const nodeName = nodeMatch[1].trim() || "Untitled";
+        let nodeContent = nodeMatch[2] || "";
+        nodeContent = nodeContent.replace(/&#125;&#125;/g, "}}").trim();
+
+        nodes.push({
+          id: storyStore.generateId(),
+          name: nodeName,
+          content: nodeContent,
+        });
+      }
+    }
 
     // If we found nodes, update the store
     if (nodes.length > 0) {
       const existingNodes = storyStore.getNodes();
-      const newNodes = nodes.map((node, index) => {
-        // Try to match with existing node by name or index
+      const newNodes = nodes.map((node) => {
+        // Try to match with existing node by ID first, then by name
         const existingNode =
-          existingNodes.find((n) => n.name === node.name) ||
-          existingNodes[index];
+          existingNodes.find((n) => n.id === node.id) ||
+          existingNodes.find((n) => n.name === node.name);
 
         return {
-          id: existingNode?.id || storyStore.generateId(),
+          id: existingNode?.id || node.id || storyStore.generateId(),
           name: node.name,
           content: node.content,
         };
@@ -157,8 +179,8 @@ export function StoryEditorSingleWysiwyg() {
     }
 
     const range = selection.getRangeAt(0);
-    const text = editorRef.current.innerText || "";
-    const html = editorRef.current.innerHTML;
+    const text = range.startContainer.textContent || "";
+    const html = range.startContainer.parentElement?.innerHTML || "";
 
     // Find all node patterns
     const nodePattern = /\{\{([^|{}]+)\|/g;
@@ -219,50 +241,65 @@ export function StoryEditorSingleWysiwyg() {
   };
 
   // Handle automatic node creation when typing between }} {{
-  const handleBeforeInput = (e: React.InputEvent<HTMLDivElement>) => {
+  const handleBeforeInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (!editorRef.current) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
-    const text = editorRef.current.innerText || "";
+    const html = editorRef.current.innerHTML;
+    const text = (
+      range.startContainer.textContent ||
+      editorRef.current.innerText ||
+      ""
+    ).trim();
+    // startOffset is the number of characters before the cursor for the current span text. We need the cursor position in the entire text.
+    // so lets loop through the text and count the characters until we reach the startContainer. Then add the startOffset to get the cursor position in the entire text.
     const cursorPos = range.startOffset;
+    console.log("cursorPos", cursorPos);
+    const beforeCursor = text
+      .substring(Math.max(0, cursorPos - 3), cursorPos)
+      .trim();
+    const afterCursor = text
+      .substring(cursorPos, Math.min(text.length, cursorPos + 3))
+      .trim();
 
-    // Check if cursor is between "}} {{"
-    if (cursorPos >= 3) {
-      const beforeCursor = text
-        .substring(Math.max(0, cursorPos - 3), cursorPos)
-        .trim();
-      const afterCursor = text
-        .substring(cursorPos, Math.min(text.length, cursorPos + 3))
-        .trim();
-      console.log("beforeCursor 1", beforeCursor);
-      console.log("afterCursor 1", afterCursor);
-
+    // Check if cursor is between "}} " and "{{"
+    if (text.length === 0 || cursorPos >= 3) {
       // If we're typing between "}} " and "{{", create new node
-      if (beforeCursor.endsWith("}}") && afterCursor.startsWith("{{")) {
-        // Insert {{|}} at cursor position
+      if (
+        text.length === 0 ||
+        (beforeCursor.endsWith("}}") && afterCursor == "")
+      ) {
         e.preventDefault();
 
-        const newText =
-          text.substring(0, cursorPos) +
-          `{{${e.data}|}}` +
-          text.substring(cursorPos);
-        editorRef.current.innerText = newText;
+        // Generate new node ID
+        const newId = storyStore.generateId();
+        const inputData = (e.nativeEvent as InputEvent).data || "";
 
-        // Set cursor position before {{|
-        const newCursorPos = cursorPos + 3; // Before "{{|"
-        const newRange = document.createRange();
-        const textNode = editorRef.current.firstChild;
-        if (
-          textNode &&
-          textNode.nodeType === Node.TEXT_NODE &&
-          textNode.textContent
-        ) {
-          const maxPos = Math.min(newCursorPos, textNode.textContent.length);
-          newRange.setStart(textNode, maxPos);
-          newRange.setEnd(textNode, maxPos);
+        // Create the new span with node structure
+        const newSpan = document.createElement("span");
+        newSpan.setAttribute("data-node-id", newId);
+        newSpan.textContent = `{{${inputData}|}}`;
+
+        // Insert the span at cursor position, after the current sibling.
+        const containerNode = range.commonAncestorContainer;
+        const parentSpanElement =
+          containerNode.nodeType === Node.ELEMENT_NODE
+            ? (containerNode as Element).closest("span[data-node-id]")
+            : containerNode.parentElement?.closest("span[data-node-id]") ||
+              containerNode;
+        (parentSpanElement as Element)?.after(newSpan);
+        range.deleteContents();
+
+        // Position cursor inside the span, after {{ and before |
+        const textNode = newSpan.firstChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const cursorOffset = 2 + inputData.length; // After "{{inputData"
+          const newRange = document.createRange();
+          newRange.setStart(textNode, cursorOffset);
+          newRange.setEnd(textNode, cursorOffset);
           selection.removeAllRanges();
           selection.addRange(newRange);
         }
@@ -283,54 +320,39 @@ export function StoryEditorSingleWysiwyg() {
 
         if (!editorRef.current || cursorPos.nodeIndex === null) return;
 
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
         const html = editorRef.current.innerHTML;
-        const nodePattern = /\{\{([^|{}]+)\|/g;
-        const matches: Array<{ pipeIndex: number; contentStart: number }> = [];
-        let match;
-        let nodeCount = 0;
 
-        while ((match = nodePattern.exec(html)) !== null) {
-          if (nodeCount === cursorPos.nodeIndex) {
-            const pipeIndex = match.index + match[0].length - 1;
-            const contentStart = pipeIndex + 1;
-            matches.push({ pipeIndex, contentStart });
-            break;
-          }
-          nodeCount++;
-        }
+        // Find the span that contains the node
+        const containerNode = range.commonAncestorContainer;
+        const spanElement =
+          containerNode.nodeType === Node.ELEMENT_NODE
+            ? (containerNode as Element).closest("span[data-node-id]")
+            : containerNode.parentElement?.closest("span[data-node-id]") ||
+              null;
 
-        if (matches.length > 0 && matches[0]) {
-          const { contentStart } = matches[0];
+        if (spanElement) {
+          const spanContent = spanElement.textContent || "";
+          const nodePattern = /\{\{([^|{}]+)\|/;
+          const nodeMatch = spanContent.match(nodePattern);
 
-          // Find the text position corresponding to contentStart
-          const text = editorRef.current.innerText || "";
-          const htmlBeforeContent = html.substring(0, contentStart);
-          const textBeforeContent = htmlBeforeContent.replace(/<[^>]*>/g, "");
-
-          // Set cursor to content start
-          const range = document.createRange();
-          const selection = window.getSelection();
-
-          // Find the text node and position
-          const walker = document.createTreeWalker(
-            editorRef.current,
-            NodeFilter.SHOW_TEXT,
-            null
-          );
-
-          let textNode;
-          let offset = 0;
-          while ((textNode = walker.nextNode())) {
-            const nodeLength = textNode.textContent?.length || 0;
-            if (offset + nodeLength >= textBeforeContent.length) {
-              const posInNode = textBeforeContent.length - offset;
-              range.setStart(textNode, Math.max(0, posInNode));
-              range.setEnd(textNode, Math.max(0, posInNode));
-              selection?.removeAllRanges();
-              selection?.addRange(range);
-              break;
+          if (nodeMatch) {
+            // Find the position of | in the span
+            const pipeIndex = spanContent.indexOf("|");
+            if (pipeIndex > -1) {
+              // Set cursor to after the pipe (content portion)
+              const textNode = spanElement.firstChild;
+              if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                const newRange = document.createRange();
+                newRange.setStart(textNode, pipeIndex + 1);
+                newRange.setEnd(textNode, pipeIndex + 1);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              }
             }
-            offset += nodeLength;
           }
         }
       }
@@ -524,7 +546,7 @@ export function StoryEditorSingleWysiwyg() {
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 className={cn(
-                  "min-h-[600px] p-4 outline-none prose prose-sm max-w-none",
+                  "inline-block w-full min-h-[600px] p-4 outline-none prose prose-sm max-w-none",
                   "focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   "[&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6",
                   !content && !isFocused && "text-muted-foreground"

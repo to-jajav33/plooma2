@@ -87,7 +87,7 @@ export function WYSIWYGEditor({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         className={cn(
-          "min-h-[200px] p-4 outline-none",
+          "inline-block w-full min-h-[200px] p-4 outline-none",
           "focus:ring-2 focus:ring-ring focus:ring-offset-2",
           "[&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6"
         )}
