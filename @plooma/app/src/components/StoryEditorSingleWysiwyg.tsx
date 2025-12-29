@@ -16,6 +16,8 @@ import { AuthStore } from "../stores/AuthStore";
 import { useStore } from "@plooma/store";
 import { cn } from "@/lib/utils";
 import { AdPlacement } from "./AdPlacement";
+import { FloatingToolbar } from "./FloatingToolbar";
+import { CommandMenu } from "./CommandMenu";
 
 // Create a singleton instance of the store
 const storyStore = StoryStore.proxy<typeof StoryStore>();
@@ -25,6 +27,9 @@ export function StoryEditorSingleWysiwyg() {
   const [isFocused, setIsFocused] = useState(false);
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
+  const [showCommandMenu, setShowCommandMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const authStore = AuthStore.proxy<typeof AuthStore>();
   const authState = useStore(authStore);
   const showAds =
@@ -168,20 +173,107 @@ export function StoryEditorSingleWysiwyg() {
     inTitle: boolean;
     inContent: boolean;
     nodeIndex: number | null;
+    onBrackets: boolean;
+    betweenNodes: boolean;
   } => {
     if (!editorRef.current) {
-      return { inTitle: false, inContent: false, nodeIndex: null };
+      return {
+        inTitle: false,
+        inContent: false,
+        nodeIndex: null,
+        onBrackets: false,
+        betweenNodes: false,
+      };
     }
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
-      return { inTitle: false, inContent: false, nodeIndex: null };
+      return {
+        inTitle: false,
+        inContent: false,
+        nodeIndex: null,
+        onBrackets: false,
+        betweenNodes: false,
+      };
     }
 
     const range = selection.getRangeAt(0);
-    const text = range.startContainer.textContent || "";
-    const html = range.startContainer.parentElement?.innerHTML || "";
+    const containerNode = range.commonAncestorContainer;
 
+    // Check if cursor is inside a span with data-node-id
+    const spanElement =
+      containerNode.nodeType === Node.ELEMENT_NODE
+        ? (containerNode as Element).closest("span[data-node-id]")
+        : containerNode.parentElement?.closest("span[data-node-id]") || null;
+
+    const text = editorRef.current.innerText || "";
+    const html = editorRef.current.innerHTML;
+
+    // Calculate cursor offset in the full text
+    let cursorOffset = 0;
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      if (textNode === range.startContainer) {
+        cursorOffset += range.startOffset;
+        break;
+      }
+      cursorOffset += textNode.textContent?.length || 0;
+    }
+
+    // Check if cursor is on curly brackets
+    const charAtCursor = text[cursorOffset] || "";
+    const charBeforeCursor = text[cursorOffset - 1] || "";
+    const onBrackets =
+      charAtCursor === "{" ||
+      charAtCursor === "}" ||
+      charBeforeCursor === "{" ||
+      charBeforeCursor === "}" ||
+      (charAtCursor === "|" && charBeforeCursor === "{");
+
+    if (spanElement) {
+      const spanContent = spanElement.textContent || "";
+      const nodePattern = /\{\{([^|{}]+)\|([^}]*)\}\}/;
+      const nodeMatch = spanContent.match(nodePattern);
+
+      if (nodeMatch) {
+        // Get cursor position within the span
+        const spanRange = document.createRange();
+        spanRange.selectNodeContents(spanElement);
+        spanRange.setEnd(range.endContainer, range.endOffset);
+        const offsetInSpan = spanRange.toString().length;
+
+        const titleText = `{{${nodeMatch[1]}|`;
+        const titleLength = titleText.length;
+
+        if (offsetInSpan < titleLength) {
+          // In title portion
+          return {
+            inTitle: true,
+            inContent: false,
+            nodeIndex: 0,
+            onBrackets,
+            betweenNodes: false,
+          };
+        } else {
+          // In content portion
+          return {
+            inTitle: false,
+            inContent: true,
+            nodeIndex: 0,
+            onBrackets,
+            betweenNodes: false,
+          };
+        }
+      }
+    }
+
+    // Fallback: use text-based detection for nodes not in spans
     // Find all node patterns
     const nodePattern = /\{\{([^|{}]+)\|/g;
     const matches: Array<{
@@ -206,8 +298,25 @@ export function StoryEditorSingleWysiwyg() {
       });
     }
 
+    // Check if cursor is between nodes (after }} and before {{)
+    let betweenNodes = false;
+    if (matches.length > 0) {
+      for (let i = 0; i < matches.length - 1; i++) {
+        const currentNode = matches[i];
+        const nextNode = matches[i + 1];
+        if (currentNode && nextNode) {
+          const currentNodeEnd = currentNode.end;
+          const nextNodeStart = nextNode.start;
+          if (cursorOffset > currentNodeEnd && cursorOffset < nextNodeStart) {
+            betweenNodes = true;
+            break;
+          }
+        }
+      }
+    }
+
     // Get cursor position in text
-    const textBeforeCursor = text.substring(0, range.startOffset);
+    const textBeforeCursor = text.substring(0, cursorOffset);
 
     // Find which node the cursor is in
     for (let i = 0; i < matches.length; i++) {
@@ -229,15 +338,33 @@ export function StoryEditorSingleWysiwyg() {
 
         if (positionInNode < titleLength) {
           // In title portion
-          return { inTitle: true, inContent: false, nodeIndex: i };
+          return {
+            inTitle: true,
+            inContent: false,
+            nodeIndex: i,
+            onBrackets,
+            betweenNodes,
+          };
         } else {
           // In content portion
-          return { inTitle: false, inContent: true, nodeIndex: i };
+          return {
+            inTitle: false,
+            inContent: true,
+            nodeIndex: i,
+            onBrackets,
+            betweenNodes,
+          };
         }
       }
     }
 
-    return { inTitle: false, inContent: false, nodeIndex: null };
+    return {
+      inTitle: false,
+      inContent: false,
+      nodeIndex: null,
+      onBrackets,
+      betweenNodes,
+    };
   };
 
   // Handle automatic node creation when typing between }} {{
@@ -365,6 +492,15 @@ export function StoryEditorSingleWysiwyg() {
       const html = editorRef.current.innerHTML;
       setContent(html);
 
+      // Check if cursor is in content portion for floating toolbar
+      const cursorPos = getCursorPosition();
+      setShowFloatingToolbar(
+        cursorPos.inContent &&
+          !cursorPos.onBrackets &&
+          !cursorPos.betweenNodes &&
+          isFocused
+      );
+
       // Parse and save nodes (debounced to avoid excessive saves)
       const timeoutId = setTimeout(() => {
         parseAndSaveNodes(html);
@@ -372,6 +508,48 @@ export function StoryEditorSingleWysiwyg() {
 
       return () => clearTimeout(timeoutId);
     }
+  };
+
+  // Update floating toolbar visibility on selection change
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (editorRef.current && isFocused) {
+        const cursorPos = getCursorPosition();
+        setShowFloatingToolbar(
+          cursorPos.inContent &&
+            !cursorPos.onBrackets &&
+            !cursorPos.betweenNodes
+        );
+        // Close command menu if cursor moves
+        if (showCommandMenu) {
+          setShowCommandMenu(false);
+        }
+      } else {
+        setShowFloatingToolbar(false);
+        setShowCommandMenu(false);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [isFocused, showCommandMenu]);
+
+  const handleMenuClick = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const editorRect = editorRef.current!.getBoundingClientRect();
+
+    // Position menu below the toolbar
+    const top = rect.bottom - editorRect.top + 48; // Below toolbar
+    const left = rect.left - editorRect.left;
+
+    setMenuPosition({ top, left });
+    setShowCommandMenu(true);
   };
 
   const execCommand = (command: string, value?: string) => {
@@ -537,30 +715,44 @@ export function StoryEditorSingleWysiwyg() {
               </div>
 
               {/* Editor */}
-              <div
-                ref={editorRef}
-                contentEditable
-                onInput={handleInput}
-                onBeforeInput={handleBeforeInput}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                className={cn(
-                  "inline-block w-full min-h-[600px] p-4 outline-none prose prose-sm max-w-none",
-                  "focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                  "[&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6",
-                  !content && !isFocused && "text-muted-foreground"
-                )}
-                data-placeholder="Write your story... Use {{Node Name|Node Content}} to create nodes"
-                suppressContentEditableWarning
-              />
-              <style>{`
-                [contenteditable][data-placeholder]:empty:before {
-                  content: attr(data-placeholder);
-                  color: hsl(var(--muted-foreground));
-                  pointer-events: none;
-                }
-              `}</style>
+              <div className="relative">
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  onInput={handleInput}
+                  onBeforeInput={handleBeforeInput}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  className={cn(
+                    "inline-block w-full min-h-[600px] p-4 outline-none prose prose-sm max-w-none",
+                    "focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                    "[&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6",
+                    !content && !isFocused && "text-muted-foreground"
+                  )}
+                  data-placeholder="Write your story... Use {{Node Name|Node Content}} to create nodes"
+                  suppressContentEditableWarning
+                />
+                <style>{`
+                  [contenteditable][data-placeholder]:empty:before {
+                    content: attr(data-placeholder);
+                    color: hsl(var(--muted-foreground));
+                    pointer-events: none;
+                  }
+                `}</style>
+                <FloatingToolbar
+                  editorRef={editorRef}
+                  isVisible={showFloatingToolbar}
+                  onMenuClick={handleMenuClick}
+                />
+                <CommandMenu
+                  isOpen={showCommandMenu}
+                  onClose={() => setShowCommandMenu(false)}
+                  onCommand={execCommand}
+                  position={menuPosition}
+                  editorRef={editorRef}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
