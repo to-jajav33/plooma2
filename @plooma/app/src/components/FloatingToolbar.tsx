@@ -16,23 +16,25 @@ export function FloatingToolbar({
 }: FloatingToolbarProps) {
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
 
-  React.useEffect(() => {
+  const updatePosition = React.useCallback(() => {
     if (!isVisible || !editorRef.current) return;
 
-    const updatePosition = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
 
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const editorRect = editorRef.current!.getBoundingClientRect();
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const editorRect = editorRef.current.getBoundingClientRect();
 
-      // Position below the cursor
-      const top = rect.bottom - editorRect.top + 8; // 8px gap
-      const left = rect.left - editorRect.left;
+    // Position below the cursor
+    const top = rect.bottom - editorRect.top + 8; // 8px gap
+    const left = rect.left - editorRect.left;
 
-      setPosition({ top, left });
-    };
+    setPosition({ top, left });
+  }, [isVisible, editorRef]);
+
+  React.useEffect(() => {
+    if (!isVisible || !editorRef.current) return;
 
     updatePosition();
 
@@ -42,11 +44,26 @@ export function FloatingToolbar({
     editor?.addEventListener("scroll", handleScroll);
     window.addEventListener("scroll", handleScroll);
 
+    // Update position on input (typing)
+    const handleInput = () => updatePosition();
+    editor?.addEventListener("input", handleInput);
+
+    // Update position on key events
+    const handleKeyUp = () => updatePosition();
+    editor?.addEventListener("keyup", handleKeyUp);
+
+    // Update position on selection changes
+    const handleSelectionChange = () => updatePosition();
+    document.addEventListener("selectionchange", handleSelectionChange);
+
     return () => {
       editor?.removeEventListener("scroll", handleScroll);
       window.removeEventListener("scroll", handleScroll);
+      editor?.removeEventListener("input", handleInput);
+      editor?.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  }, [isVisible, editorRef]);
+  }, [isVisible, editorRef, updatePosition]);
 
   if (!isVisible) return null;
 
